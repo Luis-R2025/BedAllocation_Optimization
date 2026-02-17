@@ -13,17 +13,18 @@ if str(proj_root) not in sys.path:
 from src.data import get_data
 from src.data import prepare_data
 from src.data.get_data import fetch_forecast
+from src.model import ilp
 import pandas as pd
 
 
 def main():
 
-	# 1.  Read Occupancy data for the last week (adjust as needed)
+	# 1.  Read Bedroster data for the last week (adjust as needed)
 	# -------------------------------------------------------------------
-	to_date = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-	from_date = (datetime.date.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+	yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+	
 
-	df = get_data.fetch_occupancy(conn=None, from_date=from_date, to_date=to_date)
+	df = get_data.fetch_bedroster(conn=None, from_date=yesterday, to_date=yesterday)
 	# Keep only the Units of interest
 	UNITS = {
 		'3B-GYNECO/OBS',
@@ -46,7 +47,7 @@ def main():
 
 	outdir = proj_root / 'data' / 'raw'
 	outdir.mkdir(parents=True, exist_ok=True)
-	out_path = outdir / 'df_occupancy.csv'
+	out_path = outdir / 'df_bedroster.csv'
 	df_filtered.to_csv(out_path, index=False)
 	print(f'Wrote {len(df_filtered)} rows -> {out_path}')
 
@@ -56,17 +57,26 @@ def main():
 		df_prepared = prepare_data.prepare_df(df_filtered)
 		proc_dir = proj_root / 'data' / 'processed'
 		proc_dir.mkdir(parents=True, exist_ok=True)
-		proc_path = proc_dir / 'occupancy.csv'
+		proc_path = proc_dir / 'bedroster.csv'
 		df_prepared.to_csv(proc_path, index=False)
-		print(f'Wrote prepared occupancy -> {proc_path} (rows: {len(df_prepared)})')
+		print(f'Wrote prepared bedroster -> {proc_path} (rows: {len(df_prepared)})')
 	except Exception as e:
 		print(f'Error preparing data: {e}')
 
-	# 3. Load compatibility matrix from the workspace data folder (absolute path)
+	# 3. Load compatibility matrix from project data (prefer local files; fall back to legacy absolute path)
 	# -------------------------------------------------------------------
-	compat_path = r"Q:\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Occupancy\data\df_compatibility_matrix.xlsx"
+	compat_xlsx = proj_root / 'data' / 'raw' / 'df_compatibility_matrix.xlsx'
+	compat_csv = proj_root / 'data' / 'raw' / 'df_compatibility_matrix.csv'
+	legacy_path = Path(r"Q:\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Occupancy\data\df_compatibility_matrix.xlsx")
 	try:
-		df_compat = get_data.read_compatibility_matrix(path=compat_path)
+		if compat_xlsx.exists():
+			df_compat = get_data.read_compatibility_matrix(path=str(compat_xlsx))
+		elif compat_csv.exists():
+			df_compat = pd.read_csv(compat_csv)
+		elif legacy_path.exists():
+			df_compat = get_data.read_compatibility_matrix(path=str(legacy_path))
+		else:
+			raise FileNotFoundError('Compatibility matrix not found in project data/raw or legacy path')
 
 		outdir = proj_root / 'data' / 'raw'
 		outdir.mkdir(parents=True, exist_ok=True)
@@ -92,7 +102,7 @@ def main():
 	# 5. Fetch forecasted averages for last "x" months
 	# -------------------------------------------------------------------
 	try:
-		df_fore = fetch_forecast(conn=None, months=3)   ## last 3 months
+		df_fore = fetch_forecast(conn=None, months=12)   ## last 12 months
 		proc_dir = proj_root / 'data' / 'raw'
 		proc_dir.mkdir(parents=True, exist_ok=True)
 		proc_path = proc_dir / 'df_location_forecast.csv'
@@ -153,6 +163,19 @@ def main():
 			print(f'Skipping step 8: {in_path} not found')
 	except Exception as e:
 		print(f'Error applying prepare_df to location forecast: {e}')
+
+	# 9. Run IPL model using processed CSVs
+	# -------------------------------------------------------------------
+	try:
+		occ_p = proj_root / 'data' / 'processed' / 'bedroster.csv'
+		fore_p = proj_root / 'data' / 'processed' / 'location_forecast.csv'
+		compat_p = proj_root / 'data' / 'processed' / 'compatibility_matrix.csv'
+		out_p = proj_root / 'outputs' / 'inference' / 'ilp_solution.csv'
+
+		prob, sol_df, transfers_df = ilp.build_and_solve(occ_p, fore_p, compat_p, out_p)
+		print(f'Wrote ILP solution -> {out_p} (rows: {len(sol_df)})')
+	except Exception as e:
+		print(f'Error running ILP model: {e}')
 
 	
 

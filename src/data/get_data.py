@@ -1,6 +1,6 @@
-"""Lightweight helpers for fetching occupancy data from the RDS_Provincial view.
+"""Lightweight helpers for fetching bedroster data from the RDS_Provincial view.
 
-This module provides a simple function `fetch_occupancy` that returns a
+This module provides a simple function `fetch_bedroster` that returns a
 pandas.DataFrame for a given date range. By default no date filter is applied
 ("all rows in the table").
 
@@ -24,14 +24,14 @@ def get_db_connection(conn_str: Optional[str] = None):
     """Return a pyodbc connection using the given connection string or the default."""
     return pyodbc.connect(conn_str or DEFAULT_CONN_STR)
 
-# 1. Get occupancy data 
+# 1. Get bedroster data 
 #--------------------------------------
-def fetch_occupancy(
+def fetch_bedroster(
     conn: Optional[pyodbc.Connection] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
 ) -> pd.DataFrame:
-    """Fetch occupancy rows.
+    """Fetch bedroster rows.
 
     Parameters
     - conn: optional pyodbc connection. If None, a connection will be created.
@@ -122,7 +122,7 @@ def read_compatibility_matrix(path: Optional[str] = None, sheet_name: Optional[o
     raise FileNotFoundError(f"Could not find df_compatibility_matrix.xlsx. Tried: {candidates}")
 
 
-__all__ = ["get_db_connection", "fetch_occupancy", "read_compatibility_matrix"]
+__all__ = ["get_db_connection", "fetch_bedroster", "read_compatibility_matrix"]
 
 
 # 3. Get forecast or expected admission, discharges, LOS average based on the las x months.

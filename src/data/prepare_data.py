@@ -1,5 +1,5 @@
 
-"""Data preparation utilities for occupancy data.
+"""Data preparation utilities for bedroster data.
 
 Provides a small helper to normalize column names to lowercase and to fill
 missing values in admissions/discharge columns with zeros.
