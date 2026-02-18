@@ -27,7 +27,7 @@ def main():
 	df = get_data.fetch_bedroster(conn=None, from_date=yesterday, to_date=yesterday)
 	# Keep only the Units of interest
 	UNITS = {
-		'3B-GYNECO/OBS',
+		'3B-MERE ENFANT',  ##'3B-GYNECO/OBS',
 		'3D-PEDIATRIE',
 		'3D PEDOPSYCHIATRIE',
 		'3F-EVAL./READAPTATION/AVC',
@@ -172,7 +172,7 @@ def main():
 		compat_p = proj_root / 'data' / 'processed' / 'compatibility_matrix.csv'
 		out_p = proj_root / 'outputs' / 'inference' / 'ilp_solution.csv'
 
-		prob, sol_df, transfers_df = ilp.build_and_solve(occ_p, fore_p, compat_p, out_p)
+		prob, sol_df, transfers_df, meta = ilp.build_and_solve(occ_p, fore_p, compat_p, out_p)
 		print(f'Wrote ILP solution -> {out_p} (rows: {len(sol_df)})')
 	except Exception as e:
 		print(f'Error running ILP model: {e}')
