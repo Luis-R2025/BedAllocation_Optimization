@@ -11,8 +11,8 @@ Pipeline compatibility:
 - Still writes outputs/inference/ilp_solution.csv and ilp_transfers.csv for Luis reports.
 
 Alex-style artifacts written (default ON):
-- outputs/optimized_plan_<solve_date>.xlsx
-- outputs/Heatmap_OptimizedOcc_<solve_date>.png
+- outputs/report/optimized_plan.xlsx
+- outputs/report/Heatmap_OptimizedOcc.png
 
 """
 
@@ -571,13 +571,13 @@ def build_and_solve(
 
     # Alex artifacts
     if write_alex_excel:
-        base_outdir = Path(outdir_alex) if outdir_alex is not None else out_csv.parent.parent
+        base_outdir = Path(outdir_alex) if outdir_alex is not None else out_csv.parent.parent / "report"
         base_outdir.mkdir(parents=True, exist_ok=True)
 
-        heatmap_png = base_outdir / f"Heatmap_OptimizedOcc_{inputs.solve_date}.png"
+        heatmap_png = base_outdir / "Heatmap_OptimizedOcc.png"
         _write_heatmap_png(occ_tab, heatmap_png)
 
-        out_xlsx = base_outdir / f"optimized_plan_{inputs.solve_date}.xlsx"
+        out_xlsx = base_outdir / "optimized_plan.xlsx"
         _write_alex_excel(occ_tab, overflows_tab, transfers_tab, out_xlsx, heatmap_png)
 
     meta = {

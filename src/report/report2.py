@@ -2,7 +2,7 @@
 Heatmap report – Optimized Occupancy by Unit
 
 Reads:
-- outputs/report/optimized_plan.csv   (report1 output)
+- outputs/report/optimized_plan_<solve_date>.xlsx   (latest file, after report1 enrichment)
 
 Writes:
 - outputs/report/occupancy_heatmap.html
@@ -16,8 +16,19 @@ import numpy as np
 
 # ------------------ CONFIG ------------------
 ROOT = Path(".")
-REPORT_CSV = ROOT / "outputs" / "report" / "optimized_plan.csv"
+REPORT_DIR = ROOT / "outputs" / "report"
 OUTDIR = ROOT / "outputs" / "report"
+
+
+def _find_latest_xlsx(directory: Path) -> Path:
+    """Return outputs/report/optimized_plan.xlsx, raising if absent."""
+    p = directory / "optimized_plan.xlsx"
+    if not p.exists():
+        raise FileNotFoundError(
+            f"'optimized_plan.xlsx' not found in {directory}. "
+            "Run build_and_solve first."
+        )
+    return p
 
 
 def _color(value: float) -> str:
@@ -39,7 +50,7 @@ def _text_color(value: float) -> str:
 
 
 def generate_heatmap(project_root: Path | None = None) -> Path:
-    """Build an HTML heatmap from the report1 output CSV.
+    """Build an HTML heatmap from the enriched optimized_plan xlsx.
 
     Parameters
     ----------
@@ -50,23 +61,23 @@ def generate_heatmap(project_root: Path | None = None) -> Path:
     -------
     Path to the generated HTML file.
     """
-    global ROOT, REPORT_CSV, OUTDIR
+    global ROOT, REPORT_DIR, OUTDIR
     if project_root is not None:
         ROOT = Path(project_root)
-        REPORT_CSV = ROOT / "outputs" / "report" / "optimized_plan.csv"
+        REPORT_DIR = ROOT / "outputs" / "report"
         OUTDIR = ROOT / "outputs" / "report"
     OUTDIR.mkdir(parents=True, exist_ok=True)
 
-    if not REPORT_CSV.exists():
-        raise FileNotFoundError(f"Missing report1 output: {REPORT_CSV}")
+    xlsx_path = _find_latest_xlsx(REPORT_DIR)
+    print(f"[report2] Reading {xlsx_path.name}")
 
-    df = pd.read_csv(REPORT_CSV)
+    df = pd.read_excel(xlsx_path, sheet_name="Optimization occupancy", engine="openpyxl")
     df.columns = [c.strip() for c in df.columns]
 
     # Ensure required columns
     for col in ("unit", "unit_description", "beds_used", "beds", "Optimized Occupancy%", "Overflow"):
         if col not in df.columns:
-            raise ValueError(f"Missing column '{col}' in {REPORT_CSV}")
+            raise ValueError(f"Missing column '{col}' in sheet 'Optimization occupancy' of {xlsx_path.name}")
 
     df = df.sort_values("Optimized Occupancy%", ascending=False).reset_index(drop=True)
 

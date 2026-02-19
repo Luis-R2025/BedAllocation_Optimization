@@ -1,111 +1,87 @@
 
 """
-OUTPUT FORMAT ALEX VERSION
+report1 — enriches the ILP Excel artifact with unit descriptions.
 
 Reads:
-- outputs/inference/ilp_solution.csv          (Luis standard output)
-- outputs/inference/ilp_transfers.csv         (optional but recommended)
+- outputs/report/optimized_plan_<solve_date>.xlsx   (latest file produced by ilp.py)
+- data/raw/df_location_description.csv              (optional – adds unit_description column)
 
 Writes:
-- outputs/reports/optimized_plan_mnemonic.csv
+- outputs/report/optimized_plan_<solve_date>.xlsx   (same file, Optimization occupancy sheet
+                                                      updated with unit_description column)
 
-Final columns EXACTLY:
-date, unit, unit_description, beds_used, beds, Optimized Occupancy%, Overflow, destination unit, number of transfer
+No CSV is created.
 """
 
 from __future__ import annotations
 from pathlib import Path
 import pandas as pd
-import numpy as np
+from openpyxl import load_workbook
 
 
 # ------------------ CONFIG ------------------
-ROOT = Path(".")  # project root (adjust if needed)
-
-SOL_PATH = ROOT / "outputs" / "inference" / "ilp_solution.csv"
-TRANS_PATH = ROOT / "outputs" / "inference" / "ilp_transfers.csv"   # create this in run 1 (recommended)
-
-OUTDIR = ROOT / "outputs" / "report"
+ROOT = Path(".")
+REPORT_DIR = ROOT / "outputs" / "report"
 
 
 # ------------------ Helpers ------------------
-def infer_solve_date_from_bedroster() -> str:
-    """
-    If your pipeline doesn't save solve_date anywhere, we can infer:
-      solve_date = max(date in data/processed/bedroster.csv) + 1 day
-    Falls back to today's date if files aren't found / parse fails.
-    """
-    bed_path = ROOT / "data" / "processed" / "bedroster.csv"
-    if not bed_path.exists():
-        return pd.Timestamp.today().strftime("%Y-%m-%d")
-
-    bed = pd.read_csv(bed_path, sep=None, engine="python")
-    bed.columns = [c.strip() for c in bed.columns]
-
-    # tolerate header issues
-    date_col = None
-    for c in bed.columns:
-        if str(c).strip().lower() == "date":
-            date_col = c
-            break
-    if date_col is None:
-        return pd.Timestamp.today().strftime("%Y-%m-%d")
-
-    bed[date_col] = pd.to_datetime(bed[date_col], errors="coerce", dayfirst=True)
-    census_dt = bed[date_col].dropna().max()
-    if pd.isna(census_dt):
-        return pd.Timestamp.today().strftime("%Y-%m-%d")
-
-    solve_dt = census_dt + pd.Timedelta(days=1)
-    return solve_dt.strftime("%Y-%m-%d")
+def _find_latest_xlsx(directory: Path) -> Path:
+    """Return outputs/report/optimized_plan.xlsx, raising if absent."""
+    p = directory / "optimized_plan.xlsx"
+    if not p.exists():
+        raise FileNotFoundError(
+            f"'optimized_plan.xlsx' not found in {directory}. "
+            "Run build_and_solve first."
+        )
+    return p
 
 
 def generate_report(project_root: Path | None = None) -> Path:
-    """Build the optimized-plan report and return the path to the output CSV.
+    """Enrich the latest optimized_plan xlsx with unit_description and write it back.
 
     Parameters
     ----------
     project_root : Path, optional
-        If provided, overrides the module-level ROOT so that paths resolve
-        correctly when called from another working directory.
+        Overrides the module-level ROOT so paths resolve correctly when called
+        from another working directory (e.g. run_pipeline.py).
+
+    Returns
+    -------
+    Path to the (updated) xlsx file.
     """
-    global ROOT, SOL_PATH, TRANS_PATH, OUTDIR
+    global ROOT, REPORT_DIR
     if project_root is not None:
         ROOT = Path(project_root)
-        SOL_PATH = ROOT / "outputs" / "inference" / "ilp_solution.csv"
-        TRANS_PATH = ROOT / "outputs" / "inference" / "ilp_transfers.csv"
-        OUTDIR = ROOT / "outputs" / "report"
-    OUTDIR.mkdir(parents=True, exist_ok=True)
+        REPORT_DIR = ROOT / "outputs" / "report"
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ------------------ Load Luis solution ------------------
-    if not SOL_PATH.exists():
-        raise FileNotFoundError(f"Missing Luis solution file: {SOL_PATH}")
+    # ------------------ Locate & load the ILP Excel file ------------------
+    xlsx_path = _find_latest_xlsx(REPORT_DIR)
+    print(f"[report1] Enriching {xlsx_path.name}")
 
-    sol = pd.read_csv(SOL_PATH)
-    sol.columns = [c.strip() for c in sol.columns]
+    SHEET = "Optimization occupancy"
 
-    required = {"unit", "final_census", "overflow", "beds"}
-    missing = required - set(sol.columns)
+    # Read all sheets so we can write them all back (preserve Overflows, Transfers, Heatmap)
+    all_sheets: dict[str, pd.DataFrame] = pd.read_excel(
+        xlsx_path, sheet_name=None, engine="openpyxl"
+    )
+
+    if SHEET not in all_sheets:
+        raise ValueError(
+            f"Sheet '{SHEET}' not found in {xlsx_path.name}. "
+            f"Available sheets: {list(all_sheets.keys())}"
+        )
+
+    df = all_sheets[SHEET].copy()
+    df.columns = [str(c).strip() for c in df.columns]
+
+    required = {"date", "unit", "beds_used", "beds", "Optimized Occupancy%", "Overflow"}
+    missing = required - set(df.columns)
     if missing:
-        raise ValueError(f"{SOL_PATH} missing required cols {missing}. Found: {list(sol.columns)}")
-
-    sol["unit"] = sol["unit"].astype(str).str.strip()
-    sol["final_census"] = pd.to_numeric(sol["final_census"], errors="coerce").fillna(0).astype(int)
-    sol["overflow"] = pd.to_numeric(sol["overflow"], errors="coerce").fillna(0).astype(int)
-    sol["beds"] = pd.to_numeric(sol["beds"], errors="coerce").fillna(0).astype(int)
-
-    # beds_used = staffed in-beds portion (exclude overflow)
-    sol["beds_used"] = sol[["final_census", "beds"]].min(axis=1).astype(int)
-
-    # Optimized Occupancy% based on final census (includes overflow) / beds
-    sol["Optimized Occupancy%"] = (
-        100.0 * sol["final_census"] / sol["beds"].replace(0, np.nan)
-    ).fillna(0.0).round(1)
-
-    sol["Overflow"] = sol["overflow"].astype(int)
-
-    # Solve date inference
-    solve_date = infer_solve_date_from_bedroster()
+        raise ValueError(
+            f"Sheet '{SHEET}' in {xlsx_path.name} is missing columns: {missing}. "
+            f"Found: {list(df.columns)}"
+        )
 
     # ------------------ Unit description mapping ------------------
     loc_desc_path = ROOT / "data" / "raw" / "df_location_description.csv"
@@ -116,67 +92,33 @@ def generate_report(project_root: Path | None = None) -> Path:
             loc_desc["Mnemonic"].astype(str).str.strip(),
             loc_desc["Name"].astype(str).str.strip(),
         ))
-        sol["unit_description"] = sol["unit"].map(mnemonic_to_name).fillna("")
+        df["unit_description"] = df["unit"].map(mnemonic_to_name).fillna("")
     else:
         print(f"[warn] {loc_desc_path} not found – unit_description will be blank")
-        sol["unit_description"] = ""
+        df["unit_description"] = ""
 
-    # ------------------ Transfers (optional) ------------------
-    sol["destination unit"] = ""
-    sol["number of transfer"] = ""
+    # Place unit_description right after 'unit'
+    cols = list(df.columns)
+    if "unit_description" in cols:
+        cols.remove("unit_description")
+        unit_idx = cols.index("unit")
+        cols.insert(unit_idx + 1, "unit_description")
+        df = df[cols]
 
-    if TRANS_PATH.exists():
-        tr = pd.read_csv(TRANS_PATH)
-        tr.columns = [c.strip() for c in tr.columns]
+    df = df.sort_values("unit").reset_index(drop=True)
+    all_sheets[SHEET] = df
 
-        if {"origin", "destination", "transfers"}.issubset(tr.columns):
-            tr["origin"] = tr["origin"].astype(str).str.strip()
-            tr["destination"] = tr["destination"].astype(str).str.strip()
-            tr["transfers"] = pd.to_numeric(tr["transfers"], errors="coerce").fillna(0).astype(int)
+    # ------------------ Write back all sheets (non-Heatmap ones) ------------------
+    # Heatmap sheet contains an image; we preserve it by only rewriting data sheets.
+    wb = load_workbook(xlsx_path)
+    data_sheets = [s for s in all_sheets if s in wb.sheetnames]
 
-            tr = tr[tr["transfers"] > 0].copy()
+    with pd.ExcelWriter(xlsx_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        for sheet_name in data_sheets:
+            all_sheets[sheet_name].to_excel(writer, sheet_name=sheet_name, index=False)
 
-            if not tr.empty:
-                compact = (
-                    tr.groupby("origin", sort=False)
-                      .agg(
-                          **{
-                              "destination unit": ("destination", lambda s: " ; ".join(s.astype(str).tolist())),
-                              "number of transfer": ("transfers", "sum"),
-                          }
-                      )
-                      .reset_index()
-                      .rename(columns={"origin": "unit"})
-                )
-
-                sol = sol.merge(compact, on="unit", how="left", suffixes=("", "_y"))
-                sol["destination unit"] = sol["destination unit"].fillna("")
-                sol["number of transfer"] = sol["number of transfer"].fillna("")
-
-        else:
-            print("[warn] ilp_transfers.csv exists but doesn't have columns: origin, destination, transfers. Leaving transfer columns blank.")
-
-    # ------------------ Final table (exact columns) ------------------
-    final = pd.DataFrame({
-        "date": solve_date,
-        "unit": sol["unit"].astype(str).str.strip(),
-        "unit_description": sol["unit_description"].astype(str),
-        "beds_used": sol["beds_used"].astype(int),
-        "beds": sol["beds"].astype(int),
-        "Optimized Occupancy%": sol["Optimized Occupancy%"],
-        "Overflow": sol["Overflow"].astype(int),
-        "destination unit": sol.get("destination unit", "").fillna("").astype(str),
-        "number of transfer": sol.get("number of transfer", "").replace({np.nan: ""}),
-    })
-
-    # Optional: stable ordering
-    final = final.sort_values("unit").reset_index(drop=True)
-
-    out_csv = OUTDIR / "optimized_plan.csv"
-    final.to_csv(out_csv, index=False)
-
-    print("[done] Wrote  output report:", out_csv.resolve())
-    return out_csv
+    print("[done] Updated:", xlsx_path.resolve())
+    return xlsx_path
 
 
 if __name__ == "__main__":

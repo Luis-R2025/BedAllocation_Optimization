@@ -8,5 +8,6 @@ dependencies:
   - pandas
   - pyodbc
   - openpyxl
+  - matplotlib
   - pip:
   - pulp==2.8.0
