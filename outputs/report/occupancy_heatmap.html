@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Occupancy Heatmap – 2026-02-19</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 2rem;
+    background: #f5f5f5;
+  }
+  h1 {
+    color: #333;
+    margin-bottom: 0.2rem;
+  }
+  .subtitle {
+    color: #777;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 900px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #fff;
+  }
+  th {
+    background: #37474f;
+    color: #fff;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  td {
+    padding: 8px 14px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 0.9rem;
+  }
+  tr:hover td {
+    background: #f0f4f8;
+  }
+  .unit-cell {
+    font-weight: 700;
+  }
+  .desc-cell {
+    color: #555;
+    font-size: 0.85rem;
+  }
+  .num {
+    text-align: center;
+  }
+  .occ-cell {
+    text-align: center;
+    font-weight: 700;
+    border-radius: 4px;
+    min-width: 70px;
+  }
+  .badge-overflow {
+    background: #d32f2f;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .legend {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .legend-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+<h1>Occupancy Heatmap</h1>
+<p class="subtitle">Solve date: 2026-02-19</p>
+
+<table>
+<thead>
+<tr>
+  <th>Unit</th>
+  <th>Description</th>
+  <th>Beds Used</th>
+  <th>Beds</th>
+  <th>Occupancy %</th>
+  <th>Overflow</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="unit-cell">3FSP</td><td class="desc-cell">3FSP-SOINS PALLIATIFS</td><td class="num">4</td><td class="num">4</td><td class="occ-cell" style="background:#d32f2f;color:#ffffff;">100.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">3F</td><td class="desc-cell">3F-EVAL./READAPTATION/AVC</td><td class="num">17</td><td class="num">17</td><td class="occ-cell" style="background:#d32f2f;color:#ffffff;">100.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">4F</td><td class="desc-cell">4F-NEPHROLOGIE</td><td class="num">19</td><td class="num">19</td><td class="occ-cell" style="background:#d32f2f;color:#ffffff;">100.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">4E</td><td class="desc-cell">4E-ORTHOPEDIE/ORL/PLASTIE</td><td class="num">25</td><td class="num">25</td><td class="occ-cell" style="background:#d32f2f;color:#ffffff;">100.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">4C</td><td class="desc-cell">4C-MED GEN/INTERNE/TELEMETRIE</td><td class="num">29</td><td class="num">30</td><td class="occ-cell" style="background:#f57c00;color:#ffffff;">96.7%</td><td class="num">0</td></tr><tr><td class="unit-cell">4D</td><td class="desc-cell">4D ONCOLOGIE</td><td class="num">21</td><td class="num">23</td><td class="occ-cell" style="background:#fbc02d;color:#212121;">91.3%</td><td class="num">0</td></tr><tr><td class="unit-cell">3D</td><td class="desc-cell">3D-PEDIATRIE</td><td class="num">8</td><td class="num">9</td><td class="occ-cell" style="background:#fbc02d;color:#212121;">88.9%</td><td class="num">0</td></tr><tr><td class="unit-cell">4B</td><td class="desc-cell">4B-PSYCHIATRIE</td><td class="num">21</td><td class="num">24</td><td class="occ-cell" style="background:#fbc02d;color:#212121;">87.5%</td><td class="num">0</td></tr><tr><td class="unit-cell">4A</td><td class="desc-cell">4A-CHIR.GENERALE/GYN-ONCO/URO</td><td class="num">23</td><td class="num">27</td><td class="occ-cell" style="background:#fbc02d;color:#212121;">85.2%</td><td class="num">0</td></tr><tr><td class="unit-cell">SCOR</td><td class="desc-cell">SOINS CORONARIENS</td><td class="num">5</td><td class="num">6</td><td class="occ-cell" style="background:#66bb6a;color:#212121;">83.3%</td><td class="num">0</td></tr><tr><td class="unit-cell">SCHIR</td><td class="desc-cell">SOINS INT MED CHIRURGICAUX</td><td class="num">8</td><td class="num">10</td><td class="occ-cell" style="background:#66bb6a;color:#212121;">80.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">SINTER</td><td class="desc-cell">SOINS INTERMEDIAIRES</td><td class="num">6</td><td class="num">8</td><td class="occ-cell" style="background:#66bb6a;color:#212121;">75.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">3DPEDOPSY</td><td class="desc-cell">3D PEDOPSYCHIATRIE</td><td class="num">1</td><td class="num">4</td><td class="occ-cell" style="background:#42a5f5;color:#212121;">25.0%</td><td class="num">0</td></tr><tr><td class="unit-cell">3B</td><td class="desc-cell">3B-MERE ENFANT</td><td class="num">2</td><td class="num">13</td><td class="occ-cell" style="background:#42a5f5;color:#212121;">15.4%</td><td class="num">0</td></tr>
+</tbody>
+</table>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-swatch" style="background:#d32f2f"></span> &ge;100 %</div>
+  <div class="legend-item"><span class="legend-swatch" style="background:#f57c00"></span> 95–99 %</div>
+  <div class="legend-item"><span class="legend-swatch" style="background:#fbc02d"></span> 85–94 %</div>
+  <div class="legend-item"><span class="legend-swatch" style="background:#66bb6a"></span> 50–84 %</div>
+  <div class="legend-item"><span class="legend-swatch" style="background:#42a5f5"></span> &lt; 50 %</div>
+</div>
+
+</body>
+</html>

@@ -1,11 +1,7 @@
 """
-ILP bed transfers optimization model
+ILP bed transfers optimization model (Luis pipeline, Alex-compatible)
 
-This script builds and solves an ILP that attempts to keep unit census within
-bed capacity by allowing transfers between compatible units. It uses the
-following inputs:
-
-Inputs:
+Inputs (CSV):
 - data/processed/bedroster.csv
     Required columns (case-insensitive):
       date, unit, beds, patient_days (or patient_day)
@@ -31,12 +27,17 @@ Original ILP logic reproduced:
 - In85[u] + Ov85[u] <= beds[u]
 - Near95[u] >= (In85[u] + Ov85[u]) - floor(0.95 * beds[u])
 
-Objective (weighted objective):
+Objective:
 min 1000*sum(StayOverflow) + 1*sum(Transfers) + 0.1*sum(Near95)
 
-Output (matches expected ilp_solution.csv format):
+Output (matches expected ilp_solution.csv):
 unit, final_census, overflow, beds, transfers_out, transfers_in
+
+Meta (now includes dicts for Alex-style reporting):
+- census_date, solve_date, beds_dict, C0_dict
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 import pandas as pd
@@ -48,21 +49,55 @@ except Exception:
     pulp = None
 
 
+# ------------------------- Unit mnemonic normalization -------------------------
+UNIT_ALIASES = {
+    "4E-ORTHOPEDIE/ORL/PLASTIE": "4E",
+    "3D-PEDIATRIE": "3D",
+    "4A-CHIR.GENERALE/GYN-ONCO/URO": "4A",
+    "4F-NEPHROLOGIE": "4F",
+    "3F-EVAL./READAPTATION/AVC": "3F",
+    "3FSP-SOINS PALLIATIFS": "3FSP",
+    "3D PEDOPSYCHIATRIE": "3DPEDOPSY",
+    "4C-MED GEN/INTERNE/TELEMETRIE": "4C",
+    "4D ONCOLOGIE": "4D",
+    "3B-MERE ENFANT": "3B",
+    "3B-GYNECO/OBS": "3B",
+    "SOINS INT MED CHIRURGICAUX": "SCHIR",
+    "SOINS CORONARIENS": "SCOR",
+    "SOINS INTERMEDIAIRES": "SINTER",
+    "4CSI-SOINS INTERMEDIAIRES": "SINTER",
+    "4B-PSYCHIATRIE": "4B",
+}
+
+
 def _norm(x) -> str:
-    return str(x).strip()
+    s = str(x).strip()
+    return UNIT_ALIASES.get(s, s)
 
 
 def _detect_col(df: pd.DataFrame, *cands: str) -> str | None:
-    lower = {c.lower(): c for c in df.columns}
+    lower = {str(c).strip().lower(): c for c in df.columns}
     for c in cands:
-        if c.lower() in lower:
-            return lower[c.lower()]
+        key = str(c).strip().lower()
+        if key in lower:
+            return lower[key]
     return None
+
+
+def read_csv_auto(path: Path) -> pd.DataFrame:
+    """
+    Robust CSV reader: auto-detect delimiter (comma vs semicolon).
+    Prevents cases where header becomes one column like 'date;facility;unit;...'
+    """
+    df = pd.read_csv(path, sep=None, engine="python")
+    df.columns = [str(c).strip() for c in df.columns]
+    return df
 
 
 def read_compatibility_matrix(path: Path) -> pd.DataFrame:
     """Return long-form compatibility with columns: origin, destination, compatible (0/1)."""
-    df = pd.read_csv(path)
+    df = read_csv_auto(path)
+
     ocol = _detect_col(df, "origin")
     dcol = _detect_col(df, "destination")
     if ocol and dcol:
@@ -78,7 +113,7 @@ def read_compatibility_matrix(path: Path) -> pd.DataFrame:
             return out
 
         vals = pd.to_numeric(df[vcol], errors="coerce").fillna(0)
-        if vcol.lower() == "count":
+        if str(vcol).strip().lower() == "count":
             out["compatible"] = (vals.astype(float) > 0).astype(int)
         else:
             out["compatible"] = (vals.astype(float) != 0).astype(int)
@@ -115,8 +150,8 @@ def build_and_solve(
     if pulp is None:
         raise ImportError("pulp is required; please install with `pip install pulp`")
 
-    df_bed = pd.read_csv(bedroster_csv)
-    df_for = pd.read_csv(forecast_csv)
+    df_bed = read_csv_auto(bedroster_csv)
+    df_for = read_csv_auto(forecast_csv)
     df_compat = read_compatibility_matrix(compat_csv)
 
     # ---- Detect columns ----
@@ -136,7 +171,10 @@ def build_and_solve(
 
     # ---- Census date selection (automation convention) ----
     df_bed = df_bed.copy()
-    df_bed[date_col] = pd.to_datetime(df_bed[date_col], errors="coerce", format="%Y-%m-%d")
+
+    # robust: supports YYYY-MM-DD OR DD/MM/YYYY
+    df_bed[date_col] = pd.to_datetime(df_bed[date_col], errors="coerce", dayfirst=True)
+
     census_date = df_bed[date_col].max()
     if pd.isna(census_date):
         raise ValueError("Could not parse any valid dates in bedroster.csv")
@@ -196,6 +234,9 @@ def build_and_solve(
         if (o in unit_set and d in unit_set)
     ]
 
+    if not allowed_arcs:
+        raise ValueError("No allowed arcs after filtering compatibility to the modeled unit set.")
+
     # ---- Build ILP (original) ----
     prob = pulp.LpProblem("ipl_balance_one_day", pulp.LpMinimize)
 
@@ -239,7 +280,7 @@ def build_and_solve(
     rows = []
     for u in units:
         final_census = int(pulp.value(Occ[u]) or 0)
-        overflow = int(pulp.value(StayOverflow[u]) or 0)  # matches original meaning of overflow
+        overflow = int(pulp.value(StayOverflow[u]) or 0)
         beds = int(beds_dict[u])
         rows.append({"unit": u, "final_census": final_census, "overflow": overflow, "beds": beds})
 
@@ -257,10 +298,25 @@ def build_and_solve(
 
     sol_df = sol_df.fillna(0)
 
+    # Add solve date column (ISO YYYY-MM-DD) so downstream reports can use it directly
+    try:
+        sol_df["date"] = solve_date.strftime("%Y-%m-%d")
+    except Exception:
+        # fallback: use string conversion if solve_date is not a Timestamp
+        sol_df["date"] = str(solve_date)
+
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     sol_df.to_csv(out_csv, index=False)
 
-    return prob, sol_df, transfers_df, {"census_date": census_date, "solve_date": solve_date}
+    meta = {
+        "census_date": census_date,
+        "solve_date": solve_date,
+        # Added for Alex-style reporting/backlog labeling:
+        "beds_dict": beds_dict,
+        "C0_dict": C0_dict,
+    }
+
+    return prob, sol_df, transfers_df, meta
 
 
 if __name__ == "__main__":

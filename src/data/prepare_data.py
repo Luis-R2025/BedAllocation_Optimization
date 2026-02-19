@@ -32,6 +32,7 @@ def prepare_location_forecast(
 	mnemonic_col: str = "Mnemonic",
 	name_col: str = "Name",
 	allowed_locations: set | None = None,
+	map_to_name: bool = True,
 ) -> pd.DataFrame:
 	"""Map `df_forecast[location_col]` values from mnemonics to descriptive names.
 
@@ -40,10 +41,14 @@ def prepare_location_forecast(
 	  human-readable description).
 	- If `allowed_locations` is provided, the returned DataFrame will be
 	  filtered to only keep rows whose mapped location value is in that set.
+	- If `map_to_name` is False, the mnemonic→name mapping is skipped and
+	  `location_col` values are kept as-is (useful when UNITS are already
+	  expressed as mnemonics).
 
 	Returns a new DataFrame with the same columns as `df_forecast` but with
 	the `location_col` values replaced by the description (or left unchanged
-	when no mapping exists). Filtering (if any) is applied after mapping.
+	when no mapping exists or `map_to_name=False`). Filtering (if any) is
+	applied after mapping.
 	"""
 	if df_forecast is None or df_location_description is None:
 		raise ValueError("Both df_forecast and df_location_description are required")
@@ -63,8 +68,9 @@ def prepare_location_forecast(
 	else:
 		mapping = dict(zip(df_location_description[mnemonic_col], df_location_description[name_col]))
 
-	# Replace mnemonics with descriptions where possible
-	out[location_col] = out[location_col].map(lambda v: mapping.get(v, v))
+	# Replace mnemonics with descriptions where possible (skip if map_to_name=False)
+	if map_to_name:
+		out[location_col] = out[location_col].map(lambda v: mapping.get(v, v))
 
 	# Filter to allowed locations if provided
 	if allowed_locations is not None:
