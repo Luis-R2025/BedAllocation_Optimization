@@ -74,7 +74,7 @@ SELECT
         120
     ) AS [Date],
     [LOCFACILITY] AS facility,
-    [NAME] AS Unit,
+    [MNEMONIC] AS Unit,
     [LOCBEDS] AS Beds,
     [LOCPATIENTDAYS] AS Patient_days,
     [LOCADMISSIONS] AS Admissions,

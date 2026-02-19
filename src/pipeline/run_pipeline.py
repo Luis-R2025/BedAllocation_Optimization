@@ -27,21 +27,22 @@ def main():
 	df = get_data.fetch_bedroster(conn=None, from_date=yesterday, to_date=yesterday)
 	# Keep only the Units of interest
 	UNITS = {
-		'3B-MERE ENFANT',  ##'3B-GYNECO/OBS',
-		'3D-PEDIATRIE',
-		'3D PEDOPSYCHIATRIE',
-		'3F-EVAL./READAPTATION/AVC',
-		'3FSP-SOINS PALLIATIFS',
-		'4A-CHIR.GENERALE/GYN-ONCO/URO',
-		'4B-PSYCHIATRIE',
-		'4C-MED GEN/INTERNE/TELEMETRIE',
-		'4D ONCOLOGIE',
-		'4E-ORTHOPEDIE/ORL/PLASTIE',
-		'4F-NEPHROLOGIE',
-		'SOINS INT MED CHIRURGICAUX',
-		'SOINS CORONARIENS',
-		'SOINS INTERMEDIAIRES',
-	}
+    '3F',
+    'SINTER',
+    'SCHIR',
+    '4C',
+    '3B',
+    '4D',
+    'SCOR',
+    '3DPEDOPSY',
+    '3FSP',
+    '4E',
+    '3D',
+    '4F',
+    '4A',
+    '4B',
+}
+
 
 	df_filtered = df[df['Unit'].isin(UNITS)].copy()
 
@@ -65,18 +66,21 @@ def main():
 
 	# 3. Load compatibility matrix from project data (prefer local files; fall back to legacy absolute path)
 	# -------------------------------------------------------------------
+	compat_root_xlsx = proj_root / 'data' / 'df_compatibility_matrix.xlsx'
 	compat_xlsx = proj_root / 'data' / 'raw' / 'df_compatibility_matrix.xlsx'
 	compat_csv = proj_root / 'data' / 'raw' / 'df_compatibility_matrix.csv'
 	legacy_path = Path(r"Q:\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Occupancy\data\df_compatibility_matrix.xlsx")
 	try:
-		if compat_xlsx.exists():
+		if compat_root_xlsx.exists():
+			df_compat = get_data.read_compatibility_matrix(path=str(compat_root_xlsx))
+		elif compat_xlsx.exists():
 			df_compat = get_data.read_compatibility_matrix(path=str(compat_xlsx))
 		elif compat_csv.exists():
 			df_compat = pd.read_csv(compat_csv)
 		elif legacy_path.exists():
 			df_compat = get_data.read_compatibility_matrix(path=str(legacy_path))
 		else:
-			raise FileNotFoundError('Compatibility matrix not found in project data/raw or legacy path')
+			raise FileNotFoundError('Compatibility matrix not found in project data/ , data/raw/ or legacy path')
 
 		outdir = proj_root / 'data' / 'raw'
 		outdir.mkdir(parents=True, exist_ok=True)
@@ -136,6 +140,7 @@ def main():
 				mnemonic_col='Mnemonic',
 				name_col='Name',
 				allowed_locations=UNITS,
+				map_to_name=False,
 			)
 			proc_dir = proj_root / 'data' / 'processed'
 			proc_dir.mkdir(parents=True, exist_ok=True)
@@ -177,7 +182,23 @@ def main():
 	except Exception as e:
 		print(f'Error running ILP model: {e}')
 
-	
+	# 10. Generate output report
+	# -------------------------------------------------------------------
+	try:
+		from src.report.report1 import generate_report
+		report_path = generate_report(project_root=proj_root)
+		print(f'Wrote report -> {report_path}')
+	except Exception as e:
+		print(f'Error generating report: {e}')
+
+	# 11. Generate occupancy heatmap
+	# -------------------------------------------------------------------
+	try:
+		from src.report.report2 import generate_heatmap
+		heatmap_path = generate_heatmap(project_root=proj_root)
+		print(f'Wrote heatmap -> {heatmap_path}')
+	except Exception as e:
+		print(f'Error generating heatmap: {e}')
 
 
 if __name__ == '__main__':
