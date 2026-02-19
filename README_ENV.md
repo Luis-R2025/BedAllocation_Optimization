@@ -23,4 +23,4 @@ python -m src.pipeline.run_pipeline
 
 Notes:
 - `pyodbc` requires the Microsoft ODBC Driver for SQL Server installed on the machine.
-- `pulp` is installed via `pip` in this environment file.
+- `pulp==2.8.0` is installed via `pip` in this environment file.

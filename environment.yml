@@ -9,4 +9,4 @@ dependencies:
   - pyodbc
   - openpyxl
   - pip:
-    - pulp
+  - pulp==2.8.0

@@ -1,4 +1,5 @@
-pandas
-pyodbc
-openpyxl
-pulp
+pandas==2.0.3
+pyodbc==4.0.35
+openpyxl==3.1.2
+pulp==2.8.0
+
