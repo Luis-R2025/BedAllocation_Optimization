@@ -1,0 +1,19 @@
+relationship 572aebbd-6f86-4bae-ae02-c7a6d6dd9003
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Calendar.Date
+	toColumn: LocalDateTable_9e1a22f0-d539-4466-80b2-9f9d442785e9.Date
+
+relationship c83e5521-ca47-4fc5-98c4-8d799e96375d
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Calendar.'Start of week'
+	toColumn: LocalDateTable_46b0038d-2893-4ff3-a973-d0c4ebf869cf.Date
+
+relationship 81e95346-8700-4951-9724-0554e52bf829
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Calendar.'End of week'
+	toColumn: LocalDateTable_08665f22-161b-402b-bedd-78c110f11ca6.Date
+
+relationship 5a82735f-65cf-2c5a-4d0c-eea27b4f580b
+	fromColumn: 'Optimization occupancy'.date
+	toColumn: Calendar.Date
+

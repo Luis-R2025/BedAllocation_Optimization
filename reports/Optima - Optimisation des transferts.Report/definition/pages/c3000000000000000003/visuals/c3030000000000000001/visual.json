@@ -1,0 +1,144 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "c3030000000000000001",
+  "position": {
+    "x": 19.575191163976211,
+    "y": 221.85216652506372,
+    "z": 3000,
+    "height": 419.77909940526763,
+    "width": 750.38232795242141,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Columns": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Optimization occupancy"
+                    }
+                  },
+                  "Property": "destination unit"
+                }
+              },
+              "queryRef": "Optimization occupancy.destination unit",
+              "nativeQueryRef": "Destination Unit",
+              "active": true
+            }
+          ]
+        },
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Optimization occupancy"
+                    }
+                  },
+                  "Property": "unit"
+                }
+              },
+              "queryRef": "Optimization occupancy.unit",
+              "nativeQueryRef": "Origin Unit",
+              "active": true
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Sum Transfers"
+                }
+              },
+              "queryRef": "_Measures.Sum Transfers",
+              "nativeQueryRef": "Transfers"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Transfer Matrix: Origin × Destination'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "737e22d4ad9e6ac42c43",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Optimization occupancy"
+              }
+            },
+            "Property": "unit"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "da8c286a4d0d50e87891",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Optimization occupancy"
+              }
+            },
+            "Property": "destination unit"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "9de477d4d04c330788de",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "Sum Transfers"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

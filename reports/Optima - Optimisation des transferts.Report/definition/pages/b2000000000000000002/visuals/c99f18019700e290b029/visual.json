@@ -1,0 +1,78 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "c99f18019700e290b029",
+  "position": {
+    "x": 0,
+    "y": 222.93967714528461,
+    "z": 6001,
+    "height": 76.125743415463035,
+    "width": 181.61427357689038,
+    "tabOrder": 6001
+  },
+  "visual": {
+    "visualType": "slicer",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Optimization occupancy"
+                    }
+                  },
+                  "Property": "unit_description"
+                }
+              },
+              "queryRef": "Optimization occupancy.unit_description",
+              "nativeQueryRef": "Unit",
+              "active": true,
+              "displayName": "Unit"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "data": [
+        {
+          "properties": {
+            "mode": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Dropdown'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "syncGroup": {
+      "groupName": "unit_description",
+      "fieldChanges": true,
+      "filterChanges": true
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "f86626d042879405ea63",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Optimization occupancy"
+              }
+            },
+            "Property": "unit_description"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
+  }
+}

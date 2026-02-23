@@ -1,0 +1,57 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "c3020000000000000002",
+  "position": {
+    "x": 440.44180118946474,
+    "y": 42.412914188615119,
+    "z": 2000,
+    "height": 129.41376380628716,
+    "width": 299.06542056074767,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "slicer",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Optimization occupancy"
+                    }
+                  },
+                  "Property": "type of transfer"
+                }
+              },
+              "queryRef": "Optimization occupancy.type of transfer",
+              "nativeQueryRef": "Transfer Type",
+              "active": true
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "025f737bc62bed00d2ce",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Optimization occupancy"
+              }
+            },
+            "Property": "type of transfer"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
+  }
+}

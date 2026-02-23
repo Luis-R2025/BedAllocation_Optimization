@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Optima - Optimisation des transferts"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "ff4e61eb-f2dc-4e98-af14-cb8a81639520"
+  }
+}

@@ -1,0 +1,214 @@
+table _Measures
+	lineageTag: 92caa673-4e74-400d-af20-51a0f97156f3
+
+	/// Total bed capacity across all units (snapshot)
+	measure 'Total Beds' = SUMX( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( MAX( 'Optimization occupancy'[beds] ) ) )
+		formatString: #,##0
+		displayFolder: 1. Executive Overview
+		lineageTag: 229e3c1d-949e-43c8-8844-e838bfb3a501
+
+	/// Total beds currently in use
+	measure 'Total Beds Used' = SUM( 'Optimization occupancy'[beds_used] )
+		formatString: #,##0
+		displayFolder: 1. Executive Overview
+		lineageTag: 91e05056-a1e7-4ede-ba37-74c55d43342b
+
+	/// System-wide occupancy rate
+	measure 'Global Occupancy %' = DIVIDE( [Total Beds Used], [Total Beds], 0 )
+		formatString: 0.0%
+		displayFolder: 1. Executive Overview
+		lineageTag: 8661eb98-b096-48ee-b0d1-7a8d2241e96f
+
+	/// Number of units with occupancy exceeding 95%
+	measure 'Units Above 95%' = COUNTROWS( FILTER( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) > 0.95 ) )
+		formatString: #,##0
+		displayFolder: 1. Executive Overview
+		lineageTag: 279c7e26-2ae9-4221-ad32-0bbb3c8e68a5
+
+	/// Total number of patient transfers
+	measure 'Total Transfers' = SUM( 'Optimization occupancy'[number of transfer] )
+		formatString: #,##0
+		displayFolder: 1. Executive Overview
+		lineageTag: 5e43a1da-6dc2-4e5a-9380-cbf494c43be1
+
+	/// Total overflow count
+	measure 'Total Overflow' = SUM( 'Optimization occupancy'[Overflow] )
+		formatString: #,##0
+		displayFolder: 1. Executive Overview
+		lineageTag: 924fa34a-69c3-4ea7-8249-28195e84ac97
+
+	/// Total backlog transfers
+	measure 'Total Backlog Transfers' = CALCULATE( SUM( 'Optimization occupancy'[number of transfer] ), 'Optimization occupancy'[type of transfer] = "backlog" )
+		formatString: #,##0
+		displayFolder: 1. Executive Overview
+		lineageTag: bab27180-69a8-4ad7-a6da-befc26ae4172
+
+	/// Average optimized occupancy for bar chart
+	measure 'Optimized Occupancy by Unit' = AVERAGE( 'Optimization occupancy'[Optimized Occupancy%] )
+		formatString: 0.0
+		displayFolder: 1. Executive Overview
+		lineageTag: 77c50455-e3a6-4c56-9a94-834f4ee3c708
+
+	/// 0=Green, 1=Yellow, 2=Red for conditional formatting
+	measure 'Occupancy Color Code' = SWITCH( TRUE(), [Optimized Occupancy by Unit] < 0.85, 0, [Optimized Occupancy by Unit] <= 0.95, 1, 2 )
+		formatString: 0
+		displayFolder: 1. Executive Overview
+		lineageTag: 47e17515-e5f7-4e70-9bdc-d9dbe58bbf5b
+
+	/// Hex color for conditional formatting
+	measure 'Occupancy Color Hex' = SWITCH( TRUE(), [Optimized Occupancy by Unit] < 0.85, "#2ca02c", [Optimized Occupancy by Unit] <= 0.95, "#ffcc00", "#d62728" )
+		displayFolder: 1. Executive Overview
+		lineageTag: 8f89b36f-8843-4dc6-9e53-0dcf86024532
+
+	/// Daily occupancy for time-series charts
+	measure 'Daily Global Occupancy' = DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 )
+		formatString: 0.0%
+		displayFolder: 2. Historical Trends
+		lineageTag: b5b7d9a0-0687-4c0e-ab12-c25570eed6f0
+
+	/// Same period last year comparison
+	measure 'Global Occupancy SPLY' = CALCULATE( [Daily Global Occupancy], SAMEPERIODLASTYEAR( Calendar[Date] ) )
+		formatString: 0.0%
+		displayFolder: 2. Historical Trends
+		lineageTag: 0c8838b6-9c0c-426d-bd0b-f9cbe43a80f2
+
+	/// 7-day moving average of global occupancy
+	measure 'Occupancy 7D Moving Avg' = AVERAGEX( DATESINPERIOD( Calendar[Date], LASTDATE( Calendar[Date] ), -7, DAY ), [Daily Global Occupancy] )
+		formatString: 0.0%
+		displayFolder: 2. Historical Trends
+		lineageTag: 47b76830-c3f8-4bf8-a0fb-6f6178542f67
+
+	/// Daily transfers for trend line
+	measure 'Daily Transfers' = SUM( 'Optimization occupancy'[number of transfer] )
+		formatString: #,##0
+		displayFolder: 2. Historical Trends
+		lineageTag: a87952ca-afdc-4b5e-94db-2d4f864eeb71
+
+	/// Daily overflow for trend line
+	measure 'Daily Overflow' = SUM( 'Optimization occupancy'[Overflow] )
+		formatString: #,##0
+		displayFolder: 2. Historical Trends
+		lineageTag: 46f57b80-e0d5-4c5e-8831-b8e675f6aab4
+
+	/// Daily backlog transfers for trend line
+	measure 'Daily Backlog Transfers' = CALCULATE( SUM( 'Optimization occupancy'[number of transfer] ), 'Optimization occupancy'[type of transfer] = "backlog" )
+		formatString: #,##0
+		displayFolder: 2. Historical Trends
+		lineageTag: 03265d60-ab58-4c71-bcd7-16ab5c415d4d
+
+	/// Year-to-date global occupancy
+	measure 'Occupancy YTD' = DIVIDE( CALCULATE( SUM( 'Optimization occupancy'[beds_used] ), DATESYTD( Calendar[Date] ) ), CALCULATE( SUM( 'Optimization occupancy'[beds] ), DATESYTD( Calendar[Date] ) ), 0 )
+		formatString: 0.0%
+		displayFolder: 2. Historical Trends
+		lineageTag: 8794f6d9-dd2e-485e-b97b-836b6307fbcb
+
+	/// Sum of transfers for matrix cells
+	measure 'Sum Transfers' = SUM( 'Optimization occupancy'[number of transfer] )
+		formatString: #,##0
+		displayFolder: 3. Transfer Analysis
+		lineageTag: ce8702c5-278b-46c9-b546-b631c0a07ec6
+
+	/// Average transfers per unit (historical)
+	measure 'Avg Transfers per Unit' = AVERAGEX( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( SUM( 'Optimization occupancy'[number of transfer] ) ) )
+		formatString: #,##0.0
+		displayFolder: 3. Transfer Analysis
+		lineageTag: c2a4e531-dc7f-4496-890a-d3b4017fdd54
+
+	/// Capacity type transfers
+	measure 'Capacity Transfers' = CALCULATE( SUM( 'Optimization occupancy'[number of transfer] ), 'Optimization occupancy'[type of transfer] = "capacity" )
+		formatString: #,##0
+		displayFolder: 3. Transfer Analysis
+		lineageTag: 07857458-15bb-4226-9653-0052008d20cd
+
+	/// Overflow type transfers
+	measure 'Overflow Transfers' = CALCULATE( SUM( 'Optimization occupancy'[number of transfer] ), 'Optimization occupancy'[type of transfer] = "overflow" )
+		formatString: #,##0
+		displayFolder: 3. Transfer Analysis
+		lineageTag: f654993c-243a-49b1-8540-cb31b83f02f7
+
+	/// Average optimized occupancy %
+	measure 'Optimized Pct' = AVERAGE( 'Optimization occupancy'[Optimized Occupancy%] )
+		formatString: 0.0
+		displayFolder: 4. Optimization Impact
+		lineageTag: dad0e254-342e-489d-98bc-7e5314eca74e
+
+	/// Days where unit is at 100% occupancy
+	measure 'Days at 100%' = CALCULATE( COUNTROWS( 'Optimization occupancy' ), 'Optimization occupancy'[OccupancyPct] >= 1 )
+		formatString: #,##0
+		displayFolder: 4. Optimization Impact
+		lineageTag: 3aa27397-02d6-4faa-bdbb-097a7789289e
+
+	/// Distinct days where any unit exceeded 95%
+	measure 'Days Any Unit Over 95%' = CALCULATE( DISTINCTCOUNT( 'Optimization occupancy'[date] ), FILTER( 'Optimization occupancy', 'Optimization occupancy'[OccupancyPct] > 0.95 ) )
+		formatString: #,##0
+		displayFolder: 4. Optimization Impact
+		lineageTag: f8ad9a54-4a35-4e02-b1ff-86c2a3c74247
+
+	/// Count of units repeatedly at 100% (3+ days)
+	measure 'Units Repeated 100%' = COUNTROWS( FILTER( ADDCOLUMNS( VALUES( 'Optimization occupancy'[unit] ), "DaysAt100", CALCULATE( COUNTROWS( 'Optimization occupancy' ), 'Optimization occupancy'[OccupancyPct] >= 1 ) ), [DaysAt100] >= 3 ) )
+		formatString: #,##0
+		displayFolder: 4. Optimization Impact
+		lineageTag: 93b22e01-0147-4407-a74d-f1f495afe045
+
+	/// PtLast5% total (patients in last 5% of capacity)
+	measure 'Total PtLast5%' = SUM( 'Optimization occupancy'[PtLast5%] )
+		formatString: #,##0
+		displayFolder: 4. Optimization Impact
+		lineageTag: 26bd1cf2-89d5-4b76-b402-80be35acf051
+
+	/// Maximum unit-level occupancy across units per day
+	measure 'Max Unit Occupancy' = MAXX( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) )
+		formatString: 0.0%
+		displayFolder: 5. Derived Metrics
+		lineageTag: b14f6baa-ac28-4dd8-885e-218ab4e54891
+
+	/// Minimum unit-level occupancy across units per day
+	measure 'Min Unit Occupancy' = MINX( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) )
+		formatString: 0.0%
+		displayFolder: 5. Derived Metrics
+		lineageTag: 76b66d6b-6a51-4401-a386-2724c7cc307f
+
+	/// Standard deviation of occupancy across units
+	measure 'StdDev Occupancy' = STDEVX.P( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) )
+		formatString: 0.00%
+		displayFolder: 5. Derived Metrics
+		lineageTag: c7f3e82c-01b2-4236-8249-ce4cbfa801b4
+
+	/// Variance of occupancy across units
+	measure 'Variance Occupancy' = VAR MeanOcc = AVERAGEX( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) ) RETURN AVERAGEX( VALUES( 'Optimization occupancy'[unit] ), POWER( CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) - MeanOcc, 2 ) )
+		formatString: 0.0000
+		displayFolder: 5. Derived Metrics
+		lineageTag: 03d228d6-1830-4e21-b3e7-1259f906cba5
+
+	/// Percentage of units above 95% occupancy
+	measure '% Units Above 95%' = DIVIDE( COUNTROWS( FILTER( VALUES( 'Optimization occupancy'[unit] ), CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) > 0.95 ) ), DISTINCTCOUNT( 'Optimization occupancy'[unit] ), 0 )
+		formatString: 0.0%
+		displayFolder: 5. Derived Metrics
+		lineageTag: 6862078b-7b0c-4a38-abc5-3bcd62ce9559
+
+	/// Percentage of units between 75-90% occupancy
+	measure '% Units 75-90%' = VAR TotalUnits = DISTINCTCOUNT( 'Optimization occupancy'[unit] ) VAR UnitsInRange = COUNTROWS( FILTER( VALUES( 'Optimization occupancy'[unit] ), VAR occ = CALCULATE( DIVIDE( SUM( 'Optimization occupancy'[beds_used] ), SUM( 'Optimization occupancy'[beds] ), 0 ) ) RETURN occ >= 0.75 && occ <= 0.9 ) ) RETURN DIVIDE( UnitsInRange, TotalUnits, 0 )
+		formatString: 0.0%
+		displayFolder: 5. Derived Metrics
+		lineageTag: 0181bd14-c0e2-427a-9a50-9a2ae954fbbf
+
+	/// Occupancy range (Max - Min) across units
+	measure 'Occupancy Range' = [Max Unit Occupancy] - [Min Unit Occupancy]
+		formatString: 0.0%
+		displayFolder: 5. Derived Metrics
+		lineageTag: 410904f7-9419-4bba-996d-b55dece6a611
+
+	partition _Measures = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i44FAA==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [Column1 = _t]),
+				    #"Changed Type" = Table.TransformColumnTypes(Source,{{"Column1", type text}}),
+				    #"Removed Columns" = Table.RemoveColumns(#"Changed Type",{"Column1"})
+				in
+				    #"Removed Columns"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

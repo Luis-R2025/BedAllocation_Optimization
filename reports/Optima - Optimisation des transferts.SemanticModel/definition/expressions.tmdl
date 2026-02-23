@@ -1,0 +1,79 @@
+expression 'Errors in ED_Visits_ModelMetrics' =
+		let
+		Source = ED_Visits_ModelMetrics,
+		  #"Detected Type Mismatches" = let
+		    tableWithOnlyPrimitiveTypes = Table.SelectColumns(Source, Table.ColumnsOfType(Source, {type nullable number, type nullable text, type nullable logical, type nullable date, type nullable datetime, type nullable datetimezone, type nullable time, type nullable duration})),
+		    recordTypeFields = Type.RecordFields(Type.TableRow(Value.Type(tableWithOnlyPrimitiveTypes))),
+		    fieldNames = Record.FieldNames(recordTypeFields),
+		    fieldTypes = List.Transform(Record.ToList(recordTypeFields), each [Type]),
+		    pairs = List.Transform(List.Positions(fieldNames), (i) => {fieldNames{i}, (v) => if v = null or Value.Is(v, fieldTypes{i}) then v else error [Message = "The type of the value does not match the type of the column.", Detail = v], fieldTypes{i}})
+		in
+		    Table.TransformColumns(Source, pairs),
+		  #"Added Index" = Table.AddIndexColumn(#"Detected Type Mismatches", "Row Number" ,1),
+		  #"Kept Errors" = Table.SelectRowsWithErrors(#"Added Index", {"Facility", "Model", "Parameters", "BacktestDays", "RMSE", "MAE", "MAPE", "sMAPE", "Coverage95_backtest", "TrainStart", "TrainEnd", "TrainLength", "ModelStatus", "Converged", "RunTimeStamp"}),
+		  #"Reordered Columns" = Table.ReorderColumns(#"Kept Errors", {"Row Number", "Facility", "Model", "Parameters", "BacktestDays", "RMSE", "MAE", "MAPE", "sMAPE", "Coverage95_backtest", "TrainStart", "TrainEnd", "TrainLength", "ModelStatus", "Converged", "RunTimeStamp"})
+		in
+		  #"Reordered Columns"
+	lineageTag: 6f7767ef-fa36-4687-9d40-760177d05809
+	queryGroup: 'Query Errors - 04/12/2025 6:05:50 PM'
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+
+expression 'Errors in ED_Visits_ModelMetrics (2)' =
+		let
+		Source = ED_Visits_ModelMetrics,
+		  #"Detected Type Mismatches" = let
+		    tableWithOnlyPrimitiveTypes = Table.SelectColumns(Source, Table.ColumnsOfType(Source, {type nullable number, type nullable text, type nullable logical, type nullable date, type nullable datetime, type nullable datetimezone, type nullable time, type nullable duration})),
+		    recordTypeFields = Type.RecordFields(Type.TableRow(Value.Type(tableWithOnlyPrimitiveTypes))),
+		    fieldNames = Record.FieldNames(recordTypeFields),
+		    fieldTypes = List.Transform(Record.ToList(recordTypeFields), each [Type]),
+		    pairs = List.Transform(List.Positions(fieldNames), (i) => {fieldNames{i}, (v) => if v = null or Value.Is(v, fieldTypes{i}) then v else error [Message = "The type of the value does not match the type of the column.", Detail = v], fieldTypes{i}})
+		in
+		    Table.TransformColumns(Source, pairs),
+		  #"Added Index" = Table.AddIndexColumn(#"Detected Type Mismatches", "Row Number" ,1),
+		  #"Kept Errors" = Table.SelectRowsWithErrors(#"Added Index", {"Facility", "Model", "Parameters", "BacktestDays", "RMSE", "MAE", "MAPE", "sMAPE", "Coverage95_backtest", "TrainStart", "TrainEnd", "TrainLength", "ModelStatus", "Converged", "RunTimeStamp"}),
+		  #"Reordered Columns" = Table.ReorderColumns(#"Kept Errors", {"Row Number", "Facility", "Model", "Parameters", "BacktestDays", "RMSE", "MAE", "MAPE", "sMAPE", "Coverage95_backtest", "TrainStart", "TrainEnd", "TrainLength", "ModelStatus", "Converged", "RunTimeStamp"})
+		in
+		  #"Reordered Columns"
+	lineageTag: 57f04a4e-4262-4468-99ef-fcc456b57894
+	queryGroup: 'Query Errors - 05/12/2025 10:56:45 AM'
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+
+expression ED_Visits_ModelMetrics =
+		let
+		    Source = Excel.Workbook(File.Contents("\\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\Donnees\Urgence\ED_Visits_Forecast.xlsx"), null, true),
+		    ModelMetrics_Sheet = Source{[Item="ModelMetrics",Kind="Sheet"]}[Data],
+		    #"Promoted Headers" = Table.PromoteHeaders(ModelMetrics_Sheet, [PromoteAllScalars=true]),
+		    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Facility", type text}, {"Model", type text}, {"RMSE", type number}, {"MAE", type number}, {"MAPE", type number}})
+		in
+		    #"Changed Type"
+	lineageTag: aa88703e-5288-4a19-803e-dfd6f8eb5388
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+
+expression ED_Visits =
+		let
+		    Source = PowerPlatform.Dataflows(null),
+		    Workspaces = Source{[Id="Workspaces"]}[Data],
+		    #"d996ffe1-84d3-4b26-9fe3-6f7a774300a8" = Workspaces{[workspaceId="d996ffe1-84d3-4b26-9fe3-6f7a774300a8"]}[Data],
+		    #"25e20b8c-fb37-4638-9f87-c30da1730c89" = #"d996ffe1-84d3-4b26-9fe3-6f7a774300a8"{[dataflowId="25e20b8c-fb37-4638-9f87-c30da1730c89"]}[Data],
+		    VIT_EdModel_ = #"25e20b8c-fb37-4638-9f87-c30da1730c89"{[entity="VIT_EdModel",version=""]}[Data],
+		    #"Removed Other Columns" = Table.SelectColumns(VIT_EdModel_,{"ServiceDate", "EDFacility", "AcctNumber"}),
+		    #"Filtered Rows" = Table.SelectRows(#"Removed Other Columns", each [ServiceDate] > #date(2023, 10, 1)),
+		    #"Grouped Rows" = Table.Group(#"Filtered Rows", {"ServiceDate", "EDFacility"}, {{"Visits", each Table.RowCount(Table.Distinct(_)), Int64.Type}}),
+		    #"Sorted Rows" = Table.Sort(#"Grouped Rows",{{"EDFacility", Order.Ascending}, {"ServiceDate", Order.Ascending}})
+		in
+		    #"Sorted Rows"
+	lineageTag: 74b2f067-3a60-4702-a2e8-07c8736643c9
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,221 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "d4030000000000000001",
+  "position": {
+    "x": 213.17472118959108,
+    "y": 275.98513011152414,
+    "z": 4000,
+    "height": 413.02602230483274,
+    "width": 630.95910780669146,
+    "tabOrder": 4000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Optimization occupancy"
+                    }
+                  },
+                  "Property": "unit"
+                }
+              },
+              "queryRef": "Optimization occupancy.unit",
+              "nativeQueryRef": "Unit",
+              "displayName": "Unit"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Optimization occupancy"
+                    }
+                  },
+                  "Property": "unit_description"
+                }
+              },
+              "queryRef": "Optimization occupancy.unit_description",
+              "nativeQueryRef": "Unit description",
+              "displayName": "Unit description"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Optimized Pct"
+                }
+              },
+              "queryRef": "_Measures.Optimized Pct",
+              "nativeQueryRef": "Optimized %",
+              "displayName": "Optimized %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Days at 100%"
+                }
+              },
+              "queryRef": "_Measures.Days at 100%",
+              "nativeQueryRef": "Days at 100%"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Total PtLast5%"
+                }
+              },
+              "queryRef": "_Measures.Total PtLast5%",
+              "nativeQueryRef": "PtLast5%"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Total Overflow"
+                }
+              },
+              "queryRef": "_Measures.Total Overflow",
+              "nativeQueryRef": "Overflow"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "78.11152416356877D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.Optimized Pct"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "66.02973977695167D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.Days at 100%"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "73.41635687732342D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.Total PtLast5%"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "72.04460966542752D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.Total Overflow"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "239.6096654275093D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Optimization occupancy.unit_description"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "61.75147455600657D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Optimization occupancy.unit"
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Unit-Level Impact Detail'"
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

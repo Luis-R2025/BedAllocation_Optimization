@@ -50,7 +50,7 @@ def _text_color(value: float) -> str:
 
 
 def generate_heatmap(project_root: Path | None = None) -> Path:
-    """Build an HTML heatmap from the enriched optimized_plan xlsx.
+    """Build a multi-day HTML matrix heatmap from the accumulated optimized_plan xlsx.
 
     Parameters
     ----------
@@ -75,34 +75,53 @@ def generate_heatmap(project_root: Path | None = None) -> Path:
     df.columns = [c.strip() for c in df.columns]
 
     # Ensure required columns
-    for col in ("unit", "unit_description", "beds_used", "beds", "Optimized Occupancy%", "Overflow"):
+    for col in ("unit", "beds_used", "beds", "Optimized Occupancy%", "Overflow"):
         if col not in df.columns:
             raise ValueError(f"Missing column '{col}' in sheet 'Optimization occupancy' of {xlsx_path.name}")
 
-    df = df.sort_values("Optimized Occupancy%", ascending=False).reset_index(drop=True)
+    if "unit_description" not in df.columns:
+        df["unit_description"] = ""
 
-    report_date = df["date"].iloc[0] if "date" in df.columns else "N/A"
+    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+    dates = sorted(df["date"].unique())
+    date_range = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
 
-    # ---- Build HTML ----
+    # Pivot occupancy into unit × date matrix
+    pct_df = df.pivot_table(index="unit", columns="date", values="Optimized Occupancy%", aggfunc="first")
+    bu_df = df.pivot_table(index="unit", columns="date", values="beds_used", aggfunc="first").fillna(0).astype(int)
+    beds_df = df.pivot_table(index="unit", columns="date", values="beds", aggfunc="first").fillna(0).astype(int)
+    ov_df = df.pivot_table(index="unit", columns="date", values="Overflow", aggfunc="first").fillna(0).astype(int)
+    for m in (pct_df, bu_df, beds_df, ov_df):
+        m.sort_index(axis=1, inplace=True)
+
+    # Unit descriptions lookup
+    desc_map = dict(zip(df["unit"], df["unit_description"]))
+
+    # ---- Build HTML matrix ----
+    date_headers = "".join(f'<th class="date-col">{d}</th>' for d in dates)
+
     rows_html = []
-    for _, r in df.iterrows():
-        occ = float(r["Optimized Occupancy%"])
-        bg = _color(occ)
-        fg = _text_color(occ)
-        overflow_badge = (
-            f'<span class="badge-overflow">{int(r["Overflow"])}</span>'
-            if int(r.get("Overflow", 0)) > 0
-            else str(int(r.get("Overflow", 0)))
-        )
+    for unit in sorted(pct_df.index):
+        cells = ""
+        for d in dates:
+            if d in pct_df.columns and not pd.isna(pct_df.loc[unit, d]):
+                occ = float(pct_df.loc[unit, d])
+                bg = _color(occ)
+                fg = _text_color(occ)
+                bu = int(bu_df.loc[unit, d])
+                bd = int(beds_df.loc[unit, d])
+                ov = int(ov_df.loc[unit, d])
+                ov_str = f' <span class="badge-overflow">+{ov}</span>' if ov > 0 else ""
+                cells += (
+                    f'<td class="occ-cell" style="background:{bg};color:{fg};">'
+                    f'{occ:.0f}%<br><small>{bu}/{bd}{ov_str}</small></td>'
+                )
+            else:
+                cells += '<td class="occ-cell" style="background:#eee;color:#999;">—</td>'
+        desc = desc_map.get(unit, "")
         rows_html.append(
-            f"<tr>"
-            f'<td class="unit-cell">{r["unit"]}</td>'
-            f'<td class="desc-cell">{r["unit_description"]}</td>'
-            f'<td class="num">{int(r["beds_used"])}</td>'
-            f'<td class="num">{int(r["beds"])}</td>'
-            f'<td class="occ-cell" style="background:{bg};color:{fg};">{occ:.1f}%</td>'
-            f'<td class="num">{overflow_badge}</td>'
-            f"</tr>"
+            f'<tr><td class="unit-cell">{unit}</td>'
+            f'<td class="desc-cell">{desc}</td>{cells}</tr>'
         )
 
     html = f"""\
@@ -110,7 +129,7 @@ def generate_heatmap(project_root: Path | None = None) -> Path:
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Occupancy Heatmap – {report_date}</title>
+<title>Occupancy Heatmap – {date_range}</title>
 <style>
   body {{
     font-family: 'Segoe UI', Arial, sans-serif;
@@ -128,51 +147,62 @@ def generate_heatmap(project_root: Path | None = None) -> Path:
   }}
   table {{
     border-collapse: collapse;
-    width: 100%;
-    max-width: 900px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     background: #fff;
   }}
   th {{
     background: #37474f;
     color: #fff;
-    padding: 10px 14px;
-    text-align: left;
+    padding: 8px 10px;
+    text-align: center;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    white-space: nowrap;
   }}
   td {{
-    padding: 8px 14px;
+    padding: 6px 10px;
     border-bottom: 1px solid #e0e0e0;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }}
   tr:hover td {{
-    background: #f0f4f8;
+    filter: brightness(1.08);
   }}
   .unit-cell {{
     font-weight: 700;
+    white-space: nowrap;
+    text-align: left;
   }}
   .desc-cell {{
     color: #555;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
+    text-align: left;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }}
-  .num {{
-    text-align: center;
+  .date-col {{
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    min-width: 55px;
   }}
   .occ-cell {{
     text-align: center;
     font-weight: 700;
-    border-radius: 4px;
-    min-width: 70px;
+    min-width: 55px;
+  }}
+  .occ-cell small {{
+    font-weight: 400;
+    font-size: 0.7rem;
   }}
   .badge-overflow {{
     background: #d32f2f;
     color: #fff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.8rem;
+    padding: 1px 4px;
+    border-radius: 8px;
+    font-size: 0.65rem;
     font-weight: 700;
   }}
   .legend {{
@@ -197,17 +227,14 @@ def generate_heatmap(project_root: Path | None = None) -> Path:
 </head>
 <body>
 <h1>Occupancy Heatmap</h1>
-<p class="subtitle">Solve date: {report_date}</p>
+<p class="subtitle">{date_range} &mdash; {len(dates)} day(s), {len(pct_df.index)} units</p>
 
 <table>
 <thead>
 <tr>
   <th>Unit</th>
   <th>Description</th>
-  <th>Beds Used</th>
-  <th>Beds</th>
-  <th>Occupancy %</th>
-  <th>Overflow</th>
+  {date_headers}
 </tr>
 </thead>
 <tbody>

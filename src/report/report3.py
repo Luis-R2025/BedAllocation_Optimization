@@ -41,23 +41,31 @@ def _write_heatmap_png(
     vmin: float = 0.0,
     vmax: float = 110.0,
 ) -> None:
-    day_str = str(occ_tab["date"].iloc[0])
-    locations = occ_tab["unit"].astype(str).tolist()
+    """Render a multi-day heatmap (units x dates) from the accumulated occ_tab."""
+    occ = occ_tab.copy()
+    occ["date"] = pd.to_datetime(occ["date"]).dt.strftime("%Y-%m-%d")
 
-    pct_df = pd.DataFrame({day_str: occ_tab["Optimized Occupancy%"].astype(float).values}, index=locations)
-    beds_used_mat = pd.DataFrame({day_str: occ_tab["beds_used"].astype(int).values}, index=locations)
-    beds_mat = pd.DataFrame({day_str: occ_tab["beds"].astype(int).values}, index=locations)
-    ov_mat = pd.DataFrame({day_str: occ_tab["Overflow"].astype(int).values}, index=locations)
+    pct_df = occ.pivot_table(index="unit", columns="date", values="Optimized Occupancy%", aggfunc="first")
+    beds_used_mat = occ.pivot_table(index="unit", columns="date", values="beds_used", aggfunc="first").fillna(0).astype(int)
+    beds_mat = occ.pivot_table(index="unit", columns="date", values="beds", aggfunc="first").fillna(0).astype(int)
+    ov_mat = occ.pivot_table(index="unit", columns="date", values="Overflow", aggfunc="first").fillna(0).astype(int)
 
+    for df in (pct_df, beds_used_mat, beds_mat, ov_mat):
+        df.sort_index(axis=1, inplace=True)
+
+    n_dates = len(pct_df.columns)
     cmap = mpl.colormaps.get_cmap("RdYlGn_r") if hasattr(mpl, "colormaps") else plt.get_cmap("RdYlGn_r")
-    fig, ax = plt.subplots(figsize=(7, max(4, 0.4 * len(pct_df.index) + 1)))
+    fig_w = max(7, 1.2 * n_dates + 2)
+    fig_h = max(4, 0.4 * len(pct_df.index) + 1)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     im = ax.imshow(pct_df.values.astype(float), aspect="auto", cmap=cmap, norm=Normalize(vmin=vmin, vmax=vmax))
 
     ax.set_yticks(range(len(pct_df.index)))
     ax.set_yticklabels(pct_df.index)
     ax.set_xticks(range(len(pct_df.columns)))
-    ax.set_xticklabels(pct_df.columns, rotation=0)
+    ax.set_xticklabels(pct_df.columns, rotation=45, ha="right")
 
+    fsize = 8 if n_dates <= 3 else max(5, 8 - 0.3 * n_dates)
     for i in range(len(pct_df.index)):
         for j in range(len(pct_df.columns)):
             if pd.isna(pct_df.iloc[i, j]):
@@ -67,10 +75,11 @@ def _write_heatmap_png(
             bd_i = int(beds_mat.iloc[i, j])
             ov_i = int(ov_mat.iloc[i, j])
             label = f"{valp:.0f}%\n{bu_i}/{bd_i}" + (f" +{ov_i}" if ov_i > 0 else "")
-            ax.text(j, i, label, ha="center", va="center", fontsize=8,
+            ax.text(j, i, label, ha="center", va="center", fontsize=fsize,
                     color=("black" if valp < 80 else "white"))
 
-    ax.set_title(f"Optimized occupancy (beds_used/beds + overflow) — {day_str}")
+    title_dates = f"{pct_df.columns[0]} to {pct_df.columns[-1]}" if n_dates > 1 else str(pct_df.columns[0])
+    ax.set_title(f"Optimized occupancy (beds_used/beds + overflow) — {title_dates}")
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label("Optimized occupancy %")
     plt.tight_layout()

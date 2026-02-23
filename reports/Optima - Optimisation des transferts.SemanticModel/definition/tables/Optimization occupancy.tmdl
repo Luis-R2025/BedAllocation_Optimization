@@ -1,0 +1,127 @@
+table 'Optimization occupancy'
+	lineageTag: dc1d87bb-2775-4ec5-b6f8-21773a553e23
+
+	column date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: b0ed6792-9411-42a6-80fd-6f2bd7d7d4ba
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column unit
+		dataType: string
+		lineageTag: 374a62a0-b25b-48c4-b629-ad0c2cd511b8
+		summarizeBy: none
+		sourceColumn: unit
+
+		annotation SummarizationSetBy = Automatic
+
+	column unit_description
+		dataType: string
+		lineageTag: aae8fa62-3419-4aac-83cb-0052de6045d5
+		summarizeBy: none
+		sourceColumn: unit_description
+
+		annotation SummarizationSetBy = Automatic
+
+	column beds_used
+		dataType: int64
+		formatString: 0
+		lineageTag: 579c481f-133f-4914-8ab0-87f643ed15cc
+		summarizeBy: sum
+		sourceColumn: beds_used
+
+		annotation SummarizationSetBy = Automatic
+
+	column beds
+		dataType: int64
+		formatString: 0
+		lineageTag: 2d7f0523-2466-4d68-952a-f303faa1c3c4
+		summarizeBy: sum
+		sourceColumn: beds
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Optimized Occupancy%'
+		dataType: double
+		lineageTag: 70da6b60-c442-427c-b020-01a82a97ec16
+		summarizeBy: sum
+		sourceColumn: Optimized Occupancy%
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column PtLast5%
+		dataType: int64
+		formatString: 0
+		lineageTag: 7739e54d-aacf-4342-a368-e791e475b2ef
+		summarizeBy: sum
+		sourceColumn: PtLast5%
+
+		annotation SummarizationSetBy = Automatic
+
+	column Overflow
+		dataType: int64
+		formatString: 0
+		lineageTag: 25d76d2f-22dc-4413-bd80-bd57978dc639
+		summarizeBy: sum
+		sourceColumn: Overflow
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'destination unit'
+		dataType: string
+		lineageTag: 4dde347d-7465-4cd9-935e-57f7e700d368
+		summarizeBy: none
+		sourceColumn: destination unit
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'number of transfer'
+		dataType: int64
+		formatString: 0
+		lineageTag: 9f96e4e3-f71c-4979-a00a-360c36af93c8
+		summarizeBy: sum
+		sourceColumn: number of transfer
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'type of transfer'
+		dataType: string
+		lineageTag: 440dea12-33e7-4f28-9e66-6bcb358a2fb4
+		summarizeBy: none
+		sourceColumn: type of transfer
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Row-level occupancy percentage (beds_used / beds)
+	column OccupancyPct = DIVIDE( 'Optimization occupancy'[beds_used], 'Optimization occupancy'[beds], 0 )
+		dataType: double
+		formatString: 0.00%
+		lineageTag: 96babdc5-0a27-4a51-9c14-d22d97b999a3
+		summarizeBy: none
+
+	/// Occupancy threshold bucket for slicers and conditional formatting
+	column OccupancyCategory = SWITCH( TRUE(), 'Optimization occupancy'[OccupancyPct] > 0.95, "95%+", 'Optimization occupancy'[OccupancyPct] > 0.85, "85-95%", "<85%" )
+		dataType: string
+		lineageTag: 900a3517-017e-49f7-961c-2f309fbb4ec4
+		summarizeBy: none
+
+	partition 'Optimization occupancy' = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("Q:\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\outputs\report\optimized_plan.xlsx"), null, true),
+				    #"Optimization occupancy_Sheet" = Source{[Item="Optimization occupancy",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(#"Optimization occupancy_Sheet", [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"date", type date}, {"unit", type text}, {"unit_description", type text}, {"beds_used", Int64.Type}, {"beds", Int64.Type}, {"Optimized Occupancy%", type number}, {"PtLast5%", Int64.Type}, {"Overflow", Int64.Type}, {"destination unit", type text}, {"number of transfer", Int64.Type}, {"type of transfer", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

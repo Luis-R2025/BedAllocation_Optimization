@@ -447,29 +447,96 @@ def _extract_outputs(inputs: ModelInputs, Occ, In85, Ov85, StayOverflow, Trans, 
     return sol_df, transfers_tab, overflows_tab, occ_tab
 
 
+# ------------------------- History accumulation helpers -------------------------
+def _append_csv(new_df: pd.DataFrame, path: Path, date_col: str = "date") -> None:
+    """Append *new_df* to an existing CSV at *path*, replacing rows that share the same date(s)."""
+    path = Path(path)
+    if path.exists() and path.stat().st_size > 0:
+        try:
+            existing = pd.read_csv(path)
+            if date_col in existing.columns and date_col in new_df.columns:
+                new_dates = set(new_df[date_col].astype(str).unique())
+                existing = existing[~existing[date_col].astype(str).isin(new_dates)]
+            combined = pd.concat([existing, new_df], ignore_index=True)
+        except Exception:
+            combined = new_df
+    else:
+        combined = new_df
+    if date_col in combined.columns:
+        combined = combined.sort_values(date_col).reset_index(drop=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    combined.to_csv(path, index=False)
+
+
+def _accumulate_excel_sheets(
+    occ_tab: pd.DataFrame,
+    overflows_tab: pd.DataFrame,
+    transfers_tab: pd.DataFrame,
+    out_xlsx: Path,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Read existing *out_xlsx* (if any), merge old history with today's data, return accumulated frames."""
+    acc_occ = occ_tab.copy()
+    acc_ov = overflows_tab.copy()
+    acc_tr = transfers_tab.copy()
+    if not out_xlsx.exists():
+        return acc_occ, acc_ov, acc_tr
+    try:
+        existing = pd.read_excel(out_xlsx, sheet_name=None, engine="openpyxl")
+        solve_dates = set(occ_tab["date"].astype(str).unique())
+        mapping = [
+            ("Optimization occupancy", acc_occ, occ_tab),
+            ("Overflows", acc_ov, overflows_tab),
+            ("Transfers", acc_tr, transfers_tab),
+        ]
+        results = []
+        for sheet, acc, today in mapping:
+            if sheet in existing and "date" in existing[sheet].columns:
+                old = existing[sheet]
+                old = old[~old["date"].astype(str).isin(solve_dates)]
+                acc = pd.concat([old, today], ignore_index=True)
+            results.append(acc)
+        acc_occ, acc_ov, acc_tr = results
+    except Exception:
+        pass  # if reading fails, use today-only data
+    for df in (acc_occ, acc_ov, acc_tr):
+        if "date" in df.columns and len(df) > 0:
+            df.sort_values("date", inplace=True, ignore_index=True)
+    return acc_occ, acc_ov, acc_tr
+
+
 # ------------------------- Alex-style Heatmap + Excel (MATCH ALEX) -------------------------
 def _write_heatmap_png(occ_tab: pd.DataFrame, out_png: Path, vmin: float = 0.0, vmax: float = 110.0) -> None:
+    """Render a multi-day heatmap (units × dates) from the accumulated occ_tab."""
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize
 
-    day_str = str(occ_tab["date"].iloc[0])
-    locations = occ_tab["unit"].astype(str).tolist()
+    occ = occ_tab.copy()
+    occ["date"] = pd.to_datetime(occ["date"]).dt.strftime("%Y-%m-%d")
 
-    pct_df = pd.DataFrame({day_str: occ_tab["Optimized Occupancy%"].astype(float).values}, index=locations)
-    beds_used_mat = pd.DataFrame({day_str: occ_tab["beds_used"].astype(int).values}, index=locations)
-    beds_mat = pd.DataFrame({day_str: occ_tab["beds"].astype(int).values}, index=locations)
-    ov_mat = pd.DataFrame({day_str: occ_tab["Overflow"].astype(int).values}, index=locations)
+    pct_df = occ.pivot_table(index="unit", columns="date", values="Optimized Occupancy%", aggfunc="first")
+    beds_used_mat = occ.pivot_table(index="unit", columns="date", values="beds_used", aggfunc="first").fillna(0).astype(int)
+    beds_mat = occ.pivot_table(index="unit", columns="date", values="beds", aggfunc="first").fillna(0).astype(int)
+    ov_mat = occ.pivot_table(index="unit", columns="date", values="Overflow", aggfunc="first").fillna(0).astype(int)
 
+    # Sort columns chronologically
+    for df in (pct_df, beds_used_mat, beds_mat, ov_mat):
+        df.sort_index(axis=1, inplace=True)
+
+    n_dates = len(pct_df.columns)
     cmap = mpl.colormaps.get_cmap("RdYlGn_r") if hasattr(mpl, "colormaps") else plt.get_cmap("RdYlGn_r")
-    fig, ax = plt.subplots(figsize=(7, max(4, 0.4 * len(pct_df.index) + 1)))
+    fig_w = max(7, 1.2 * n_dates + 2)
+    fig_h = max(4, 0.4 * len(pct_df.index) + 1)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     im = ax.imshow(pct_df.values.astype(float), aspect="auto", cmap=cmap, norm=Normalize(vmin=vmin, vmax=vmax))
 
     ax.set_yticks(range(len(pct_df.index)))
     ax.set_yticklabels(pct_df.index)
     ax.set_xticks(range(len(pct_df.columns)))
-    ax.set_xticklabels(pct_df.columns, rotation=0)
+    ax.set_xticklabels(pct_df.columns, rotation=45, ha="right")
 
+    # Annotate cells — use smaller font when many dates
+    fsize = 8 if n_dates <= 3 else max(5, 8 - 0.3 * n_dates)
     for i in range(len(pct_df.index)):
         for j in range(len(pct_df.columns)):
             if pd.isna(pct_df.iloc[i, j]):
@@ -479,9 +546,11 @@ def _write_heatmap_png(occ_tab: pd.DataFrame, out_png: Path, vmin: float = 0.0, 
             bd_i = int(beds_mat.iloc[i, j])
             ov_i = int(ov_mat.iloc[i, j])
             label = f"{valp:.0f}%\n{bu_i}/{bd_i}" + (f" +{ov_i}" if ov_i > 0 else "")
-            ax.text(j, i, label, ha="center", va="center", fontsize=8, color=("black" if valp < 80 else "white"))
+            ax.text(j, i, label, ha="center", va="center", fontsize=fsize,
+                    color=("black" if valp < 80 else "white"))
 
-    ax.set_title(f"Optimized occupancy (with beds_used/beds + overflow) — {day_str}")
+    title_dates = f"{pct_df.columns[0]} to {pct_df.columns[-1]}" if n_dates > 1 else str(pct_df.columns[0])
+    ax.set_title(f"Optimized occupancy (beds_used/beds + overflow) — {title_dates}")
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label("Optimized occupancy %")
     plt.tight_layout()
@@ -507,8 +576,9 @@ def _write_alex_excel(occ_tab: pd.DataFrame, overflows_tab: pd.DataFrame, transf
 
         ws_hm = writer.book.add_worksheet("Heatmap")
         writer.sheets["Heatmap"] = ws_hm
-        day_str = str(occ_tab["date"].iloc[0])
-        ws_hm.write(0, 0, f"Optimized occupancy heatmap — {day_str}")
+        dates = sorted(occ_tab["date"].astype(str).unique())
+        date_range = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
+        ws_hm.write(0, 0, f"Optimized occupancy heatmap — {date_range}")
         ws_hm.write(1, 0, "Cell label shows: % and occ/beds (+overflow if any)")
         if heatmap_png.exists():
             ws_hm.insert_image(3, 0, str(heatmap_png))
@@ -550,35 +620,41 @@ def build_and_solve(
 
     sol_df, transfers_tab, overflows_tab, occ_tab = _extract_outputs(inputs, Occ, In85, Ov85, StayOverflow, Trans, Near95)
 
-    # Luis pipeline CSV
+    # ---- Append to historical CSV files (not overwrite) ----
     out_csv = Path(out_csv)
     out_csv.parent.mkdir(parents=True, exist_ok=True)
-    sol_df.to_csv(out_csv, index=False)
+    _append_csv(sol_df, out_csv, date_col="date")
 
-    # A simple transfers CSV for Luis (origin,destination,transfers) derived from Alex transfers_tab
+    # Transfers CSV — include date so history can be tracked
     if transfers_tab.empty:
-        transfers_simple = pd.DataFrame(columns=["origin", "destination", "transfers"])
+        transfers_simple = pd.DataFrame(columns=["date", "origin", "destination", "transfers"])
     else:
         transfers_simple = (
-            transfers_tab.groupby(["origin unit", "destination unit"], sort=False)["patient (number)"]
+            transfers_tab.groupby(["date", "origin unit", "destination unit"], sort=False)["patient (number)"]
             .sum()
             .reset_index()
             .rename(columns={"origin unit": "origin", "destination unit": "destination", "patient (number)": "transfers"})
         )
 
     transfers_path = out_csv.parent / "ilp_transfers.csv"
-    transfers_simple.to_csv(transfers_path, index=False)
+    _append_csv(transfers_simple, transfers_path, date_col="date")
 
-    # Alex artifacts
+    # ---- Alex artifacts (Excel + heatmap) — accumulated history ----
     if write_alex_excel:
         base_outdir = Path(outdir_alex) if outdir_alex is not None else out_csv.parent.parent / "report"
         base_outdir.mkdir(parents=True, exist_ok=True)
 
-        heatmap_png = base_outdir / "Heatmap_OptimizedOcc.png"
-        _write_heatmap_png(occ_tab, heatmap_png)
-
         out_xlsx = base_outdir / "optimized_plan.xlsx"
-        _write_alex_excel(occ_tab, overflows_tab, transfers_tab, out_xlsx, heatmap_png)
+
+        # Merge today's results with existing history in xlsx
+        acc_occ, acc_overflows, acc_transfers = _accumulate_excel_sheets(
+            occ_tab, overflows_tab, transfers_tab, out_xlsx,
+        )
+
+        heatmap_png = base_outdir / "Heatmap_OptimizedOcc.png"
+        _write_heatmap_png(acc_occ, heatmap_png)
+
+        _write_alex_excel(acc_occ, acc_overflows, acc_transfers, out_xlsx, heatmap_png)
 
     meta = {
         "census_date": pd.to_datetime(inputs.census_date),

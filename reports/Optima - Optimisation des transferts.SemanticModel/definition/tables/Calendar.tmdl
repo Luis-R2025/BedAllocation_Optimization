@@ -1,0 +1,223 @@
+table Calendar
+	lineageTag: 2cda76ee-4b22-41b4-b3ec-25abddcdc981
+
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 44cf8bb3-dd03-4bd3-b637-274d5bc0f5ee
+		summarizeBy: none
+		sourceColumn: Date
+
+		variation Variation
+			isDefault
+			relationship: 572aebbd-6f86-4bae-ae02-c7a6d6dd9003
+			defaultHierarchy: LocalDateTable_9e1a22f0-d539-4466-80b2-9f9d442785e9.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Year
+		dataType: int64
+		formatString: 0
+		lineageTag: a65941f3-6e25-4d27-a5d4-f31ad2346a84
+		summarizeBy: sum
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month number'
+		dataType: int64
+		formatString: 0
+		lineageTag: 9833ae0f-436c-411c-8c1b-4a0731160b10
+		summarizeBy: sum
+		sourceColumn: Month number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Fiscal number'
+		dataType: int64
+		formatString: 0
+		lineageTag: 18cb568a-398f-43df-904e-c9a8d5c5cb70
+		summarizeBy: sum
+		sourceColumn: Month Fiscal number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month name'
+		dataType: string
+		lineageTag: 9f39e752-1a4a-4ec0-9286-8e9134f96084
+		summarizeBy: none
+		sourceColumn: Month name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month name short'
+		dataType: string
+		lineageTag: 969c2b74-aac4-4bc1-b2db-794321bd1870
+		summarizeBy: none
+		sourceColumn: Month name short
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quarter number'
+		dataType: int64
+		formatString: 0
+		lineageTag: 14d764d5-8eda-40c3-8984-315b5bad8984
+		summarizeBy: sum
+		sourceColumn: Quarter number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quarter text'
+		dataType: string
+		lineageTag: 1f05e32b-a15f-4a02-a17e-d44f9759f753
+		summarizeBy: none
+		sourceColumn: Quarter text
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Fiscal Year'
+		dataType: string
+		lineageTag: f453c682-e3c4-4105-a47e-95151f842c95
+		summarizeBy: none
+		sourceColumn: Fiscal Year
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quarter Fiscal number'
+		dataType: int64
+		formatString: 0
+		lineageTag: 0df05e17-5c5a-4937-855d-e121dfdd66be
+		summarizeBy: sum
+		sourceColumn: Quarter Fiscal number
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Quarter Fiscal text'
+		dataType: string
+		lineageTag: 357990b6-e583-4ade-ab0c-8ace6db10bc8
+		summarizeBy: none
+		sourceColumn: Quarter Fiscal text
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Week of year'
+		dataType: int64
+		formatString: 0
+		lineageTag: acc2436e-7153-42ef-83c0-72f8d2cbc7c1
+		summarizeBy: sum
+		sourceColumn: Week of year
+
+		annotation SummarizationSetBy = Automatic
+
+	column Day
+		dataType: int64
+		formatString: 0
+		lineageTag: 3f7bce55-a64a-499c-af3b-2bbce49db064
+		summarizeBy: sum
+		sourceColumn: Day
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Start of week'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: e00ce1a7-4c7d-4d25-8c8f-683795bebfc7
+		summarizeBy: none
+		sourceColumn: Start of week
+
+		variation Variation
+			isDefault
+			relationship: c83e5521-ca47-4fc5-98c4-8d799e96375d
+			defaultHierarchy: LocalDateTable_46b0038d-2893-4ff3-a973-d0c4ebf869cf.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'End of week'
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 2f916ce5-e34c-4f7b-95d0-bf99351d9b6b
+		summarizeBy: none
+		sourceColumn: End of week
+
+		variation Variation
+			isDefault
+			relationship: 81e95346-8700-4951-9724-0554e52bf829
+			defaultHierarchy: LocalDateTable_08665f22-161b-402b-bedd-78c110f11ca6.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 'Week name'
+		dataType: string
+		lineageTag: 6c3b55d1-96a0-454e-b412-fd211554f401
+		summarizeBy: none
+		sourceColumn: Week name
+
+		annotation SummarizationSetBy = Automatic
+
+	column IdWeek
+		dataType: string
+		lineageTag: 6a12fe3d-25d5-4507-a629-a3740e13a2f1
+		summarizeBy: none
+		sourceColumn: IdWeek
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Mois nom'
+		dataType: string
+		lineageTag: 5cee6f72-6f9a-4e99-bb4c-d4c9106cb9eb
+		summarizeBy: none
+		sourceColumn: Mois nom
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Mois nom courte'
+		dataType: string
+		lineageTag: 0ffa93b6-bce1-4558-ac17-6a9ef59ccc76
+		summarizeBy: none
+		sourceColumn: Mois nom courte
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Trimestre nom'
+		dataType: string
+		lineageTag: 22832499-00a0-4a0c-b8cb-b6848fde8706
+		summarizeBy: none
+		sourceColumn: Trimestre nom
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Trimestre Fiscal nomb'
+		dataType: string
+		lineageTag: 3dc2a63b-6632-4e8e-b30e-b7b017954753
+		summarizeBy: none
+		sourceColumn: Trimestre Fiscal nomb
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Fiscal Year Id'
+		dataType: int64
+		formatString: 0
+		lineageTag: ffdcacb3-b414-4273-a7ec-5b063dba1288
+		summarizeBy: count
+		sourceColumn: Fiscal Year Id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Calendar = m
+		mode: import
+		source =
+				let
+				    Source = PowerPlatform.Dataflows(null),
+				    Workspaces = Source{[Id="Workspaces"]}[Data],
+				    #"d996ffe1-84d3-4b26-9fe3-6f7a774300a8" = Workspaces{[workspaceId="d996ffe1-84d3-4b26-9fe3-6f7a774300a8"]}[Data],
+				    #"6cb0d200-c052-4143-b7a1-95c561e01ec2" = #"d996ffe1-84d3-4b26-9fe3-6f7a774300a8"{[dataflowId="6cb0d200-c052-4143-b7a1-95c561e01ec2"]}[Data],
+				    Calendar_ = #"6cb0d200-c052-4143-b7a1-95c561e01ec2"{[entity="Calendar",version=""]}[Data]
+				in
+				    Calendar_
+
