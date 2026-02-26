@@ -1,6 +1,6 @@
 
 """
-report1 — enriches the ILP Excel artifact with unit descriptions.
+optimizedplan — enriches the ILP Excel artifact with unit descriptions.
 
 Reads:
 - outputs/report/optimized_plan_<solve_date>.xlsx   (latest file produced by ilp.py)
@@ -57,7 +57,7 @@ def generate_report(project_root: Path | None = None) -> Path:
 
     # ------------------ Locate & load the ILP Excel file ------------------
     xlsx_path = _find_latest_xlsx(REPORT_DIR)
-    print(f"[report1] Enriching {xlsx_path.name}")
+    print(f"[optimizedplan] Enriching {xlsx_path.name}")
 
     SHEET = "Optimization occupancy"
 

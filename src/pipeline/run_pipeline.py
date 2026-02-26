@@ -1,14 +1,16 @@
 
 
 from pathlib import Path
+import os
 import sys
 import datetime
 
 
-# Ensure project root is importable (parent of src)
+# Ensure project root is importable (parent of src) and is the working directory
 proj_root = Path(__file__).resolve().parents[2]
 if str(proj_root) not in sys.path:
 	sys.path.insert(0, str(proj_root))
+os.chdir(proj_root)
 
 from src.data import get_data
 from src.data import prepare_data
@@ -185,7 +187,7 @@ def main():
 	# 10. Generate output report
 	# -------------------------------------------------------------------
 	try:
-		from src.report.report1 import generate_report
+		from src.report.optimizedplan import generate_report
 		report_path = generate_report(project_root=proj_root)
 		print(f'Wrote report -> {report_path}')
 	except Exception as e:
@@ -194,7 +196,7 @@ def main():
 	# 11. Generate/update metrics history CSV
 	# -------------------------------------------------------------------
 	try:
-		from src.report.report4 import generate_metrics
+		from src.report.metrics_history import generate_metrics
 		metrics_path = generate_metrics(project_root=proj_root)
 		print(f'Wrote metrics history -> {metrics_path}')
 	except Exception as e:

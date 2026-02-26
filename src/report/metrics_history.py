@@ -1,5 +1,5 @@
 """
-report4 – generates/updates outputs/inference/metrics_general_history.csv
+metrics_history – generates/updates outputs/inference/metrics_general_history.csv
 
 Reads:
 - data/processed/bedroster.csv
@@ -130,11 +130,11 @@ def generate_metrics(project_root: Path | None = None, solve_date: Optional[str]
         rows.append({"date": solve_date, "metric_scope": "unit", "unit": u, "metric_name": "status_flag",       "metric_value": _status_flag(occ_u, overflow_u),         "run_timestamp": run_ts})
 
     _append_history(history_path, pd.DataFrame(rows))
-    print(f"[report4] Updated: {history_path}")
+    print(f"[metrics_history] Updated: {history_path}")
     return history_path
 
 
 # ------------------ CLI ENTRYPOINT ------------------
 if __name__ == "__main__":
     out = generate_metrics()
-    print(f"[report4] Done -> {out}")
+    print(f"[metrics_history] Done -> {out}")

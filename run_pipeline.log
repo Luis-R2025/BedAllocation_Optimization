@@ -1,0 +1,26 @@
+[26/02/2026 13:34:09.99] Starting pipeline 
+\\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\src\data\get_data.py:86: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn, params=params)
+\\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\src\data\get_data.py:154: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+\\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\src\data\get_data.py:182: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+\\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\src\model\ilp.py:127: UserWarning: Parsing dates in %Y-%m-%d format when dayfirst=True was specified. Pass `dayfirst=False` or specify a format to silence this warning.
+  dt = pd.to_datetime(bed[date_col], errors="coerce", dayfirst=True)
+\\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\src\model\ilp.py:127: UserWarning: Parsing dates in %Y-%m-%d format when dayfirst=True was specified. Pass `dayfirst=False` or specify a format to silence this warning.
+  dt = pd.to_datetime(bed[date_col], errors="coerce", dayfirst=True)
+Wrote 14 rows -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\raw\df_bedroster.csv
+Wrote prepared bedroster -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\processed\bedroster.csv (rows: 14)
+Wrote 196 rows -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\raw\df_compatibility_matrix.csv
+Wrote prepared compatibility matrix -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\processed\compatibility_matrix.csv (rows: 196)
+Wrote location averages  -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\raw\df_location_forecast.csv (rows: 122)
+Wrote location description -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\raw\df_location_description.csv (rows: 3773)
+Wrote processed location forecast -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\processed\location_forecast.csv (rows: 14)
+Wrote prepared location forecast -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\data\processed\location_forecast.csv (rows: 14)
+Wrote ILP solution -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\outputs\inference\ilp_solution.csv (rows: 14)
+[optimizedplan] Enriching optimized_plan.xlsx
+[done] Updated: \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\outputs\report\optimized_plan.xlsx
+Wrote report -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\outputs\report\optimized_plan.xlsx
+[metrics_history] Updated: \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\outputs\inference\metrics_general_history.csv
+Wrote metrics history -> \\FNBFS01.RHA-RRS.CA\documents\VitaliteNB\Aide à la décision\IntelligencePredictive_IA\3_Optimisation Transfers\outputs\inference\metrics_general_history.csv
+[26/02/2026 13:34:18.61] Done (exit code 0) 
