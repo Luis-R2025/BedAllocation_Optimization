@@ -191,23 +191,14 @@ def main():
 	except Exception as e:
 		print(f'Error generating report: {e}')
 
-	# 11. Generate occupancy heatmap (HTML)
+	# 11. Generate/update metrics history CSV
 	# -------------------------------------------------------------------
 	try:
-		from src.report.report2 import generate_heatmap
-		heatmap_path = generate_heatmap(project_root=proj_root)
-		print(f'Wrote heatmap -> {heatmap_path}')
+		from src.report.report4 import generate_metrics
+		metrics_path = generate_metrics(project_root=proj_root)
+		print(f'Wrote metrics history -> {metrics_path}')
 	except Exception as e:
-		print(f'Error generating heatmap: {e}')
-
-	# 12. Generate occupancy heatmap (PNG)
-	# -------------------------------------------------------------------
-	try:
-		from src.report.report3 import generate_heatmap_png
-		heatmap_png_path = generate_heatmap_png(project_root=proj_root)
-		print(f'Wrote heatmap PNG -> {heatmap_png_path}')
-	except Exception as e:
-		print(f'Error generating heatmap PNG: {e}')
+		print(f'Error generating metrics history: {e}')
 
 
 if __name__ == '__main__':

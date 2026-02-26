@@ -1,4 +1,6 @@
-origin,destination,transfers,date
-4E,SCHIR,1,20/02/2026
-4E,3D,1,2026-02-24
-4E,SCHIR,2,23/02/2026
+origin,destination,transfers,date,run_timestamp
+4E,SCHIR,1,20/02/2026,
+4E,3D,1,2026-02-24,2026-02-24 19:41:15
+4E,SINTER,1,2026-02-25,2026-02-25 10:24:02
+4E,SCHIR,1,2026-02-26,2026-02-26 11:10:31
+4E,SCHIR,2,23/02/2026,

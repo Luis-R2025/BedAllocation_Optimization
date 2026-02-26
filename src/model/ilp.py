@@ -4,7 +4,7 @@ This module plugs into Luis' VS Code pipeline structure while reproducing Alex's
 - date convention (solve_date inferred; census_date = solve_date-1)
 - data cleaning (delimiter autodetect; unit aliases; dayfirst date parsing)
 - ILP formulation and weights
-- Alex-style artifacts (Excel + heatmap + transfer labeling backlog vs new transfer)
+- Alex-style artifacts (Excel + transfer labeling backlog vs new transfer)
 
 Pipeline compatibility:
 - Public API stays: build_and_solve(bedroster_csv, forecast_csv, compat_csv, out_csv, ...)
@@ -12,7 +12,6 @@ Pipeline compatibility:
 
 Alex-style artifacts written (default ON):
 - outputs/report/optimized_plan.xlsx
-- outputs/report/Heatmap_OptimizedOcc.png
 
 """
 
@@ -22,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import datetime
 import math
 import numpy as np
 import pandas as pd
@@ -165,7 +165,7 @@ def _load_beds_and_raw_census(bedroster_csv: Path, solve_date_str: str) -> Tuple
     census_str = _census_str_from_solve(solve_date_str)
 
     bed = bed.copy()
-    bed[date_col] = pd.to_datetime(bed[date_col], errors="coerce", dayfirst=True).dt.strftime("%Y-%m-%d")
+    bed[date_col] = pd.to_datetime(bed[date_col], errors="coerce", dayfirst=False).dt.strftime("%Y-%m-%d")
     bed[unit_col] = _clean_text(bed[unit_col])
     bed[beds_col] = pd.to_numeric(bed[beds_col], errors="coerce").fillna(0).astype(int)
     bed[pdays_col] = pd.to_numeric(bed[pdays_col], errors="coerce").fillna(0).astype(int)
@@ -498,69 +498,25 @@ def _accumulate_excel_sheets(
         acc_occ, acc_ov, acc_tr = results
     except Exception:
         pass  # if reading fails, use today-only data
-    for df in (acc_occ, acc_ov, acc_tr):
-        if "date" in df.columns and len(df) > 0:
-            df.sort_values("date", inplace=True, ignore_index=True)
+
+    def _sort_by_date(df: pd.DataFrame) -> pd.DataFrame:
+        if "date" not in df.columns or df.empty:
+            return df
+        sort_keys = ["date", "unit"] if "unit" in df.columns else ["date"]
+        df = df.copy()
+        df["_sort_date"] = pd.to_datetime(df["date"], errors="coerce")
+        df.sort_values(["_sort_date"] + sort_keys[1:], ascending=True, inplace=True, ignore_index=True)
+        df.drop(columns=["_sort_date"], inplace=True)
+        return df
+
+    acc_occ = _sort_by_date(acc_occ)
+    acc_ov = _sort_by_date(acc_ov)
+    acc_tr = _sort_by_date(acc_tr)
     return acc_occ, acc_ov, acc_tr
 
 
-# ------------------------- Alex-style Heatmap + Excel (MATCH ALEX) -------------------------
-def _write_heatmap_png(occ_tab: pd.DataFrame, out_png: Path, vmin: float = 0.0, vmax: float = 110.0) -> None:
-    """Render a multi-day heatmap (units × dates) from the accumulated occ_tab."""
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize
-
-    occ = occ_tab.copy()
-    occ["date"] = pd.to_datetime(occ["date"]).dt.strftime("%Y-%m-%d")
-
-    pct_df = occ.pivot_table(index="unit", columns="date", values="Optimized Occupancy%", aggfunc="first")
-    beds_used_mat = occ.pivot_table(index="unit", columns="date", values="beds_used", aggfunc="first").fillna(0).astype(int)
-    beds_mat = occ.pivot_table(index="unit", columns="date", values="beds", aggfunc="first").fillna(0).astype(int)
-    ov_mat = occ.pivot_table(index="unit", columns="date", values="Overflow", aggfunc="first").fillna(0).astype(int)
-
-    # Sort columns chronologically
-    for df in (pct_df, beds_used_mat, beds_mat, ov_mat):
-        df.sort_index(axis=1, inplace=True)
-
-    n_dates = len(pct_df.columns)
-    cmap = mpl.colormaps.get_cmap("RdYlGn_r") if hasattr(mpl, "colormaps") else plt.get_cmap("RdYlGn_r")
-    fig_w = max(7, 1.2 * n_dates + 2)
-    fig_h = max(4, 0.4 * len(pct_df.index) + 1)
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-    im = ax.imshow(pct_df.values.astype(float), aspect="auto", cmap=cmap, norm=Normalize(vmin=vmin, vmax=vmax))
-
-    ax.set_yticks(range(len(pct_df.index)))
-    ax.set_yticklabels(pct_df.index)
-    ax.set_xticks(range(len(pct_df.columns)))
-    ax.set_xticklabels(pct_df.columns, rotation=45, ha="right")
-
-    # Annotate cells — use smaller font when many dates
-    fsize = 8 if n_dates <= 3 else max(5, 8 - 0.3 * n_dates)
-    for i in range(len(pct_df.index)):
-        for j in range(len(pct_df.columns)):
-            if pd.isna(pct_df.iloc[i, j]):
-                continue
-            valp = float(pct_df.iloc[i, j])
-            bu_i = int(beds_used_mat.iloc[i, j])
-            bd_i = int(beds_mat.iloc[i, j])
-            ov_i = int(ov_mat.iloc[i, j])
-            label = f"{valp:.0f}%\n{bu_i}/{bd_i}" + (f" +{ov_i}" if ov_i > 0 else "")
-            ax.text(j, i, label, ha="center", va="center", fontsize=fsize,
-                    color=("black" if valp < 80 else "white"))
-
-    title_dates = f"{pct_df.columns[0]} to {pct_df.columns[-1]}" if n_dates > 1 else str(pct_df.columns[0])
-    ax.set_title(f"Optimized occupancy (beds_used/beds + overflow) — {title_dates}")
-    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("Optimized occupancy %")
-    plt.tight_layout()
-
-    out_png.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_png, dpi=160)
-    plt.close(fig)
-
-
-def _write_alex_excel(occ_tab: pd.DataFrame, overflows_tab: pd.DataFrame, transfers_tab: pd.DataFrame, out_xlsx: Path, heatmap_png: Path) -> None:
+# ------------------------- Alex-style Excel (MATCH ALEX) -------------------------
+def _write_alex_excel(occ_tab: pd.DataFrame, overflows_tab: pd.DataFrame, transfers_tab: pd.DataFrame, out_xlsx: Path) -> None:
     try:
         import xlsxwriter  # noqa: F401
     except Exception:  # pragma: no cover
@@ -573,15 +529,6 @@ def _write_alex_excel(occ_tab: pd.DataFrame, overflows_tab: pd.DataFrame, transf
         occ_tab.to_excel(writer, sheet_name="Optimization occupancy", index=False)
         overflows_tab.to_excel(writer, sheet_name="Overflows", index=False)
         transfers_tab.to_excel(writer, sheet_name="Transfers", index=False)
-
-        ws_hm = writer.book.add_worksheet("Heatmap")
-        writer.sheets["Heatmap"] = ws_hm
-        dates = sorted(occ_tab["date"].astype(str).unique())
-        date_range = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
-        ws_hm.write(0, 0, f"Optimized occupancy heatmap — {date_range}")
-        ws_hm.write(1, 0, "Cell label shows: % and occ/beds (+overflow if any)")
-        if heatmap_png.exists():
-            ws_hm.insert_image(3, 0, str(heatmap_png))
 
         ws = writer.sheets["Optimization occupancy"]
         cols = list(occ_tab.columns)
@@ -620,6 +567,12 @@ def build_and_solve(
 
     sol_df, transfers_tab, overflows_tab, occ_tab = _extract_outputs(inputs, Occ, In85, Ov85, StayOverflow, Trans, Near95)
 
+    run_ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sol_df["run_timestamp"] = run_ts
+    occ_tab["run_timestamp"] = run_ts
+    overflows_tab["run_timestamp"] = run_ts
+    transfers_tab["run_timestamp"] = run_ts
+
     # ---- Append to historical CSV files (not overwrite) ----
     out_csv = Path(out_csv)
     out_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -636,10 +589,11 @@ def build_and_solve(
             .rename(columns={"origin unit": "origin", "destination unit": "destination", "patient (number)": "transfers"})
         )
 
+    transfers_simple["run_timestamp"] = run_ts
     transfers_path = out_csv.parent / "ilp_transfers.csv"
     _append_csv(transfers_simple, transfers_path, date_col="date")
 
-    # ---- Alex artifacts (Excel + heatmap) — accumulated history ----
+    # ---- Alex artifacts (Excel) — accumulated history ----
     if write_alex_excel:
         base_outdir = Path(outdir_alex) if outdir_alex is not None else out_csv.parent.parent / "report"
         base_outdir.mkdir(parents=True, exist_ok=True)
@@ -651,10 +605,7 @@ def build_and_solve(
             occ_tab, overflows_tab, transfers_tab, out_xlsx,
         )
 
-        heatmap_png = base_outdir / "Heatmap_OptimizedOcc.png"
-        _write_heatmap_png(acc_occ, heatmap_png)
-
-        _write_alex_excel(acc_occ, acc_overflows, acc_transfers, out_xlsx, heatmap_png)
+        _write_alex_excel(acc_occ, acc_overflows, acc_transfers, out_xlsx)
 
     meta = {
         "census_date": pd.to_datetime(inputs.census_date),
