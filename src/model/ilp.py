@@ -1,17 +1,5 @@
-"""ILP bed transfers optimization model (Luis pipeline) rewritten to match Alex script EXACTLY.
-
-This module plugs into Luis' VS Code pipeline structure while reproducing Alex's:
-- date convention (solve_date inferred; census_date = solve_date-1)
-- data cleaning (delimiter autodetect; unit aliases; dayfirst date parsing)
-- ILP formulation and weights
-- Alex-style artifacts (Excel + transfer labeling backlog vs new transfer)
-
-Pipeline compatibility:
-- Public API stays: build_and_solve(bedroster_csv, forecast_csv, compat_csv, out_csv, ...)
-- Still writes outputs/inference/ilp_solution.csv and ilp_transfers.csv for Luis reports.
-
-Alex-style artifacts written (default ON):
-- outputs/report/optimized_plan.xlsx
+"""ILP bed transfers optimization model without forecasting
+This module is a copy of the original ILP but removes the notion of forecasting. It solves directly with the latest bed census.
 
 """
 
@@ -32,7 +20,7 @@ except Exception:  # pragma: no cover
     pl = None
 
 
-# ------------------------- Unit mnemonic normalization (MATCH ALEX) -------------------------
+# ------------------------- Unit mnemonic normalization -------------------------
 UNIT_ALIASES: Dict[str, str] = {
     "4E-ORTHOPEDIE/ORL/PLASTIE": "4E",
     "3D-PEDIATRIE": "3D",
@@ -84,7 +72,7 @@ def _require_cols(where: str, **logical_to_col: Optional[str]) -> None:
         raise ValueError(f"{where}: missing required columns {missing}. Found: {list(logical_to_col.values())}")
 
 
-# ------------------------- Compatibility loading (MATCH ALEX) -------------------------
+# ------------------------- Compatibility loading  -------------------------
 def load_compat(path_like: Path) -> Tuple[List[str], List[Tuple[str, str]]]:
     """Read long-form compatibility. Requires origin, destination. Accepts allowed/compatible/count."""
     df = read_csv_auto(path_like)
@@ -116,7 +104,7 @@ def load_compat(path_like: Path) -> Tuple[List[str], List[Tuple[str, str]]]:
     return compat_units, allowed
 
 
-# ------------------------- Date inference (MATCH ALEX) -------------------------
+# ------------------------- Date inference -------------------------
 def infer_solve_date_from_bedroster(bedroster_csv: Path) -> str:
     bed = read_csv_auto(bedroster_csv)
 
@@ -139,7 +127,7 @@ def _census_str_from_solve(solve_date_str: str) -> str:
     return census_dt.strftime("%Y-%m-%d")
 
 
-# ------------------------- Inputs (MATCH ALEX) -------------------------
+# ------------------------- Inputs (removed forecast)-------------------------
 @dataclass
 class ModelInputs:
     solve_date: str
@@ -147,8 +135,6 @@ class ModelInputs:
     units: List[str]
     beds_dict: Dict[str, int]
     C0_dict: Dict[str, int]
-    A_dict: Dict[str, int]
-    D_dict: Dict[str, int]
     allowed_arcs: List[Tuple[str, str]]
 
 
@@ -193,24 +179,6 @@ def _load_beds_and_raw_census(bedroster_csv: Path, solve_date_str: str) -> Tuple
     return beds_df, raw_df
 
 
-def _load_forecast(forecast_csv: Path) -> pd.DataFrame:
-    f = read_csv_auto(forecast_csv)
-
-    loc_col = _detect_col(f, "location", "loc", "unit", "unite", "location ")
-    a_col = _detect_col(f, "admission_avg", "admit_avg", "admissions_avg", "admissions", "admission")
-    d_col = _detect_col(f, "discharge_avg", "disch_avg", "discharges_avg", "discharges", "discharge")
-
-    _require_cols(str(forecast_csv), location=loc_col, admission_avg=a_col, discharge_avg=d_col)
-
-    return pd.DataFrame(
-        {
-            "Unit": _clean_text(f[loc_col]),
-            "Admit_Avg": pd.to_numeric(f[a_col], errors="coerce").fillna(0.0),
-            "Disch_Avg": pd.to_numeric(f[d_col], errors="coerce").fillna(0.0),
-        }
-    )
-
-
 def build_inputs(
     bedroster_csv: Path,
     forecast_csv: Path,
@@ -222,17 +190,13 @@ def build_inputs(
     census_date = _census_str_from_solve(solve_date)
 
     beds_df, raw_df = _load_beds_and_raw_census(bedroster_csv, solve_date)
-    fc_df = _load_forecast(forecast_csv)
     _, allowed = load_compat(compat_csv)
 
-    df = beds_df.merge(raw_df, on="Unit", how="left").merge(fc_df, on="Unit", how="left")
+    df = beds_df.merge(raw_df, on="Unit", how="left")
 
     if df["Raw_Census"].isna().any():
         missing = df[df["Raw_Census"].isna()]["Unit"].tolist()
         raise ValueError(f"Units missing Raw_Census from bedroster for solve_date={solve_date}: {missing}")
-
-    df["A"] = df["Admit_Avg"].fillna(0).round().astype(int)
-    df["D"] = df["Disch_Avg"].fillna(0).round().astype(int)
 
     units = df["Unit"].astype(str).tolist()
     unit_set = set(units)
@@ -244,8 +208,7 @@ def build_inputs(
 
     beds_dict = dict(zip(df["Unit"], df["Beds"].astype(int)))
     C0_dict = dict(zip(df["Unit"], df["Raw_Census"].astype(int)))
-    A_dict = dict(zip(df["Unit"], df["A"].astype(int)))
-    D_dict = dict(zip(df["Unit"], df["D"].astype(int)))
+
 
     return ModelInputs(
         solve_date=solve_date,
@@ -253,13 +216,11 @@ def build_inputs(
         units=units,
         beds_dict=beds_dict,
         C0_dict=C0_dict,
-        A_dict=A_dict,
-        D_dict=D_dict,
         allowed_arcs=allowed_arcs,
     )
 
 
-# ------------------------- Solve (MATCH ALEX) -------------------------
+# ------------------------- Solve -------------------------
 def _solve_ilp(
     inputs: ModelInputs,
     transfer_cost: float = 1.0,
@@ -273,8 +234,6 @@ def _solve_ilp(
     locations = inputs.units
     beds_dict = inputs.beds_dict
     C0_dict = inputs.C0_dict
-    A_dict = inputs.A_dict
-    D_dict = inputs.D_dict
     allowed = inputs.allowed_arcs
 
     model = pl.LpProblem(f"OneDay_{inputs.solve_date}", pl.LpMinimize)
@@ -289,7 +248,7 @@ def _solve_ilp(
     for u in locations:
         inflow = pl.lpSum(Trans[(i, u, 1)] for (i, j) in allowed if j == u)
         outflow = pl.lpSum(Trans[(u, j, 1)] for (i, j) in allowed if i == u)
-        model += (Occ[(u, 1)] == C0_dict[u] - D_dict[u] + A_dict[u] + inflow - outflow, f"MassBal_{u}")
+        model += (Occ[(u, 1)] == C0_dict[u] + inflow - outflow, f"MassBal_{u}")
 
     for u in locations:
         b = int(beds_dict[u])
@@ -299,6 +258,7 @@ def _solve_ilp(
         cap95 = math.floor(0.95 * b)
         model += (Near95[(u, 1)] >= In85[(u, 1)] + Ov85[(u, 1)] - cap95, f"Near95Def_{u}")
 
+    # Objective
     model += (
         overflow_cost * pl.lpSum(StayOverflow[(u, 1)] for u in locations)
         + transfer_cost * pl.lpSum(Trans[(i, j, 1)] for (i, j) in allowed)
@@ -612,8 +572,6 @@ def build_and_solve(
         "solve_date": pd.to_datetime(inputs.solve_date),
         "beds_dict": inputs.beds_dict,
         "C0_dict": inputs.C0_dict,
-        "A_dict": inputs.A_dict,
-        "D_dict": inputs.D_dict,
         "allowed_arcs": inputs.allowed_arcs,
         "transfers_csv": str(transfers_path),
     }
